@@ -1,61 +1,67 @@
 <template>
-    <!-- 置顶公告 -->
-    <div style="height: 200px;">
-        <h3>置顶公告</h3>
-        <ul class="content-list">
-            <li v-for="pinnpost in pinnedpost.slice(0, 6)" :key="pinnpost.id">
-                <RouterLink :to="`/postdetail/${pinnpost.id}`">{{ pinnpost.title }}</RouterLink>
-                <p class="timestamp">{{ pinnpost.createTime }}</p>
-            </li>
-        </ul>
-    </div>
-    <hr>
-    <!-- 筛选和搜索 -->
-    <div style="margin: 10px">
-        <el-radio-group v-model="classic" @change="classicchange">
-            <el-radio-button :label="5">咨询领养</el-radio-button>
-            <el-radio-button :label="4">寻找猫狗</el-radio-button>
-            <el-radio-button :label="6">分享生活</el-radio-button>
-            <el-radio-button :label="7">其他</el-radio-button>
-        </el-radio-group>
-        <el-input v-model="titlecont" placeholder="请输入标题" style="width: 300px;"></el-input>
-        <el-button :icon="Search" type="success" @click="fsearch" style="margin-left: 5px;" />
-        <el-button @click="flush" style="margin: 10px;">刷新</el-button>
-        <el-button type="success" :icon="DocumentAdd" circle size="large" @click="islogin" style="float:right" />
-    </div>
-    <!-- 分页 -->
-    <div style="margin:10px 20px;">
-        <el-pagination v-model:current-page="currentpage" :background="true" layout="prev, pager, next" :page-count="pages"
-            @current-change="handleCurrentChange" />
-    </div>
-    <!-- 帖子列表 -->
-    <div class="post-list">
-        <div class="post" v-for="post in postlist" :key="post.id">
-            <div class="post-header">
-                <div class="author-avatar">
-                    <el-popover placement="bottom" :title="`昵称:`" :width="220" trigger="click">
-                        <template #>
-                            电话：{{ post.user.phone }} <br>
-                            邮箱：{{ post.user.email }} <br>
-                            领养个数：{{ post.user.howAdopt }} <br>
-                            宠宠币：{{ post.user.petCoin }}
-                        </template>
-                        <template #reference>
-                            <img :src="`http://localhost/img/${post.user.photo}`" alt="未上传头像" />
-                        </template>
-                    </el-popover>
-                </div>
-                <div class="post-title-wrapper">
-                    <h3 class="post-title">
-                        <RouterLink :to="`/postdetail/${post.id}`">{{ post.title }}</RouterLink>
-                    </h3>
-
-                    <p class="post-date">{{ post.createTime }}</p>
-                    <p class="post-comment">评论数:{{ post.commentCount }}</p>
-                </div>
+    <div class="page-container fade-up">
+        <!-- 置顶公告 -->
+        <div class="pinned-card soft-card">
+            <div class="section-head">
+                <h3 class="section-title">📌 置顶公告</h3>
             </div>
-            <div class="post-footer">
-                <div class="post-author">{{ }}</div>
+            <ul class="content-list">
+                <li v-for="pinnpost in pinnedpost.slice(0, 6)" :key="pinnpost.id">
+                    <RouterLink :to="`/postdetail/${pinnpost.id}`">{{ pinnpost.title }}</RouterLink>
+                    <p class="timestamp">{{ pinnpost.createTime }}</p>
+                </li>
+                <li v-if="pinnedpost.length === 0" class="empty-state">暂无置顶公告</li>
+            </ul>
+        </div>
+        <!-- 筛选和搜索 -->
+        <div class="toolbar soft-card">
+            <el-radio-group v-model="classic" @change="classicchange" class="seg">
+                <el-radio-button :label="5">咨询领养</el-radio-button>
+                <el-radio-button :label="4">寻找猫狗</el-radio-button>
+                <el-radio-button :label="6">分享生活</el-radio-button>
+                <el-radio-button :label="7">其他</el-radio-button>
+            </el-radio-group>
+            <el-input v-model="titlecont" placeholder="请输入标题" class="toolbar-search"></el-input>
+            <el-button :icon="Search" type="primary" @click="fsearch" circle />
+            <el-button @click="flush">刷新</el-button>
+            <div class="spacer"></div>
+            <el-button type="primary" :icon="DocumentAdd" round @click="islogin">发帖子</el-button>
+        </div>
+        <!-- 分页 -->
+        <div class="pager-bar">
+            <el-pagination v-model:current-page="currentpage" :background="true" layout="prev, pager, next"
+                :page-count="pages" @current-change="handleCurrentChange" />
+        </div>
+        <!-- 帖子列表 -->
+        <div class="post-list">
+            <div class="post" v-for="post in postlist" :key="post.id">
+                <div class="post-header">
+                    <div class="author-avatar">
+                        <el-popover placement="bottom"
+                            :title="`昵称:${post.user.nickname || post.user.username}`" :width="220" trigger="click">
+                            <template #default>
+                                电话：{{ post.user.phone }} <br>
+                                邮箱：{{ post.user.email }} <br>
+                                领养个数：{{ post.user.howAdopt }} <br>
+                                宠宠币：{{ post.user.petCoin }}
+                            </template>
+                            <template #reference>
+                                <img :src="resolveImg(post.user.photo)" alt="未上传头像" />
+                            </template>
+                        </el-popover>
+                    </div>
+                    <div class="post-title-wrapper">
+                        <h3 class="post-title">
+                            <RouterLink :to="`/postdetail/${post.id}`">{{ post.title }}</RouterLink>
+                        </h3>
+
+                        <p class="post-date">{{ post.createTime }}</p>
+                        <p class="post-comment">评论数:{{ post.commentCount }}</p>
+                    </div>
+                </div>
+                <div class="post-footer">
+                    <div class="post-author">{{ post.user.nickname || post.user.username }}</div>
+                </div>
             </div>
         </div>
     </div>
@@ -95,6 +101,7 @@ import { onMounted, reactive, ref } from 'vue';
 import axios from 'axios';
 import { DocumentAdd, Search } from '@element-plus/icons-vue'
 import { ElMessage, ElMessageBox } from 'element-plus';
+import { resolveImg } from '@/utils/url';
 
 onMounted(() => {
     userpostget()
@@ -136,7 +143,6 @@ function conditionquery(col, con) {
             } else ElMessage.error('结果为空')
         })
         .catch(err => {
-            console.error(err);
         })
 }
 //#endregion
@@ -175,7 +181,6 @@ function pinnedpostget() {
             pinnedpost.value = res.data.data.records
         })
         .catch(err => {
-            console.error(err);
         })
 }
 //#endregion
@@ -186,8 +191,8 @@ const currentUser = reactive(JSON.parse(sessionStorage.getItem("user")))
 function islogin() {
     if (currentUser != null) {
         if (currentUser.comPermiss) {
+            // 发帖人由后端从令牌解析，前端不再提交 uid
             isaddpoot.value = true
-            postinfo.uid = currentUser.id
         } else {
             ElMessage.warning('由于违规你的权限已被限制')
         }
@@ -196,8 +201,9 @@ function islogin() {
     }
 }
 
-//#region 添加帖子
+//#region 添加帖子（posting 防重复提交）
 const isaddpoot = ref(false)
+const posting = ref(false)
 const postinfo = reactive({
     title: '',
     content: '',
@@ -214,6 +220,8 @@ function addpost() {
             confirmButtonText: '确定',
             type: 'info'
         }).then(() => {
+            if (posting.value) return
+            posting.value = true
             axios.post('/post', postinfo)
                 .then(res => {
                     if (res.data.code == 200) {
@@ -221,8 +229,8 @@ function addpost() {
                     } else ElMessage.error(res.data.msg)
                 })
                 .catch(err => {
-                    console.error(err);
                 }).finally(() => {
+                    posting.value = false
                     isaddpoot.value = false
                     userpostget()
                 })
@@ -246,37 +254,82 @@ function handleCurrentChange(currentpagec) {
 </script>
 
 <style scoped>
-.content-list li {
-    background-color: #f5f5f5;
-    padding: 10px;
-    margin-bottom: 10px;
-    border-radius: 4px;
-    box-shadow: 0 2px 6px rgba(0, 0, 0, 0.1);
-    transition: box-shadow 0.3s ease;
-    width: 650px;
+/* ===== 置顶公告卡 ===== */
+.pinned-card {
+    padding: 20px 24px;
+    margin-bottom: 18px;
+}
 
+.content-list {
+    list-style: none;
+    margin: 0;
+    padding: 0;
+}
+
+.content-list li {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+    border: 1px solid var(--line);
+    padding: 10px 14px;
+    margin-bottom: 10px;
+    border-radius: var(--radius-sm);
+    background: #fff;
+    transition: box-shadow .25s ease, transform .25s ease, background-color .2s ease;
 }
 
 .content-list li:hover {
-    box-shadow: 0 4px 10px rgba(0, 0, 0, 0.2);
+    box-shadow: var(--shadow-sm);
+    background: var(--brand-100);
 }
 
 .content-list li a {
+    flex: 1;
+    min-width: 0;
     text-decoration: none;
-    color: #333;
+    color: var(--ink-1);
+    font-weight: 500;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
 }
 
 .content-list li a:hover {
-    color: #666;
+    color: var(--brand);
 }
 
 .timestamp {
-    float: right;
-    color: #999;
+    margin: 0;
+    flex-shrink: 0;
+    color: var(--ink-3);
     font-size: 12px;
 }
 
+/* ===== 工具栏 ===== */
+.toolbar {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 10px;
+    padding: 12px 16px;
+    margin-bottom: 16px;
+}
 
+.toolbar-search {
+    width: 260px;
+    max-width: 100%;
+}
+
+.spacer {
+    flex: 1;
+}
+
+.pager-bar {
+    display: flex;
+    justify-content: center;
+    margin-bottom: 20px;
+}
 
 .author-avatar {
     width: 60px;
@@ -284,7 +337,8 @@ function handleCurrentChange(currentpagec) {
     overflow: hidden;
     border-radius: 50%;
     margin-right: 10px;
-
+    flex-shrink: 0;
+    border: 1px solid var(--line);
 }
 
 .author-avatar img {
@@ -296,8 +350,10 @@ function handleCurrentChange(currentpagec) {
 
 .post-title-wrapper {
     flex: 1;
+    min-width: 0;
 }
 
+/* ===== 帖子卡片：白卡 + 品牌描边 hover ===== */
 .post-list {
     display: grid;
     grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
@@ -306,11 +362,17 @@ function handleCurrentChange(currentpagec) {
 }
 
 .post {
-    border: 1px solid #ccc;
-    border-radius: 8px;
+    border: 1px solid var(--line);
+    border-radius: var(--radius);
     padding: 20px;
-    background-color: #f7f7f7;
-    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+    background-color: #ffffff;
+    box-shadow: var(--shadow-sm);
+    transition: box-shadow .25s ease, transform .25s ease;
+}
+
+.post:hover {
+    box-shadow: var(--shadow);
+    transform: translateY(-3px);
 }
 
 .post-header {
@@ -320,8 +382,9 @@ function handleCurrentChange(currentpagec) {
 }
 
 .post-title {
-    font-size: 20px;
+    font-size: 19px;
     margin: 0;
+    font-weight: 600;
 }
 
 .post-title a {
@@ -329,32 +392,37 @@ function handleCurrentChange(currentpagec) {
     color: inherit;
 }
 
+.post-title a:hover {
+    color: var(--brand);
+}
 
 .post-date {
-    font-size: 14px;
-    color: #888;
+    font-size: 13px;
+    color: var(--ink-3);
     margin: 0;
 }
 
 .post-comment {
-    font-size: 15px;
-    color: #797676;
-    margin: 4;
+    font-size: 14px;
+    color: var(--ink-2);
+    margin: 4px 0;
+    line-height: 1.6;
 }
-
 
 .post-footer {
     display: flex;
     align-items: center;
     justify-content: space-between;
-    font-size: 14px;
-    color: #888;
+    font-size: 13px;
+    color: var(--ink-3);
+    border-top: 1px dashed var(--line);
+    padding-top: 10px;
 }
 
 .post-author {
-    font-weight: bold;
+    font-weight: 600;
+    color: var(--ink-2);
 }
-
 
 .dialog-footer button:first-child {
     margin-right: 10px;

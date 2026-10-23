@@ -2,19 +2,23 @@
   <div class="container">
     <div class="center">
       <div class="login">
-        <div class="title">猫狗之家后台管理系统</div>
+        <div class="brand-row">
+          <img src="/logo.png" alt="logo" class="brand-logo" />
+          <div class="title">猫狗之家后台管理系统</div>
+        </div>
         <div class="inputtext"><input ref="name" v-model="adminname" placeholder="管理员账号" type="text" class="input"
             autofocus></div>
         <div class="inputtext"><input v-model="password" placeholder="管理员密码" type="password" class="input"
             @keyup.enter="login"></div>
         <div class="inputtext">
-          <el-button @click="login">登录</el-button>
+          <el-button @click="login" class="login-btn">登录</el-button>
         </div>
+        <div class="tip">仅管理员可登录 · 与用户端账号体系相互独立</div>
       </div>
     </div>
   </div>
 </template>
-  
+
 <script lang="ts" setup>
 
 
@@ -41,97 +45,129 @@ function login() {
     password: password.value
   }).then((res) => {
     if (res.data.code == 200) {
-      sessionStorage.setItem('adminname', adminname.value)
+      // 保存令牌（后续 /admin/** 请求的鉴权头）与账号名（Header 展示用）
+      sessionStorage.setItem('adminToken', res.data.data.token)
+      sessionStorage.setItem('adminname', res.data.data.adminname)
       router.push('/home/center')
       ElMessage.success(res.data.msg)
     } else {
       ElMessage.error(res.data.msg)
       clear()
     }
-  }).catch(() => ElMessage.error('对不起,服务器检修中,请稍后重试~_~!'))
+  }).catch(() => { /* 网络异常已由全局拦截器统一提示 */ })
 }
 </script>
-  
+
 <style scoped>
+/* ===== 全屏背景：与用户端登录页同一套品牌渐变 ===== */
 .container {
   width: 100vw;
   height: 100vh;
-  background-image: linear-gradient(120deg, #84fab0 0%, #8fd3f4 100%);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background:
+    radial-gradient(640px 360px at 10% 6%, var(--brand-200) 0%, transparent 60%),
+    radial-gradient(560px 320px at 90% 94%, #ffedd8 0%, transparent 62%),
+    linear-gradient(160deg, #fffaf6 0%, var(--bg) 70%);
 }
 
-/*设置在页面居中效果*/
+/* 居中交由 flex 完成，替代原先的绝对定位写法 */
 .center {
-  position: absolute;
-  top: 50%;
-  left: 50%;
-  transform: translate(-50%, -50%);
+  width: 100%;
+  display: flex;
+  justify-content: center;
 }
 
+/* ===== 登录卡：白卡片 + 品牌细节 ===== */
 .login {
-  width: 400px;
-  height: 300px;
-  /*border-radius: 5%;*/
-  /*background-image: linear-gradient(to right, #4facfe 0%, #00f2fe 100%);*/
-  border-radius: 45px;
-  background: linear-gradient(315deg, #64b8be, #77dae2);
-  box-shadow: -24px -24px 49px #5ca9af,
-    24px 24px 49px #82eff7;
+  width: 420px;
+  max-width: calc(100vw - 32px);
+  background: #ffffff;
+  border: 1px solid var(--line);
+  border-radius: var(--radius-lg);
+  box-shadow: var(--shadow);
+  padding: 40px 40px 28px;
+  box-sizing: border-box;
+}
+
+.brand-row {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  margin-bottom: 30px;
+}
+
+.brand-logo {
+  width: 38px;
+  height: 38px;
+  border-radius: 10px;
 }
 
 .title {
   text-align: center;
-  font-size: 25px;
-  padding-top: 25px;
-  padding-bottom: 25px;
+  font-size: 20px;
+  font-weight: 700;
+  color: var(--ink-1);
+  letter-spacing: .5px;
 }
 
 .inputtext {
-  text-align: center;
-  padding-top: 15px;
+  display: flex;
+  justify-content: center;
+  padding-top: 14px;
 }
 
+/* ===== 输入框：描边 + 品牌 focus 环，替换原先的拟物风 ===== */
 .input {
-  line-height: 28px;
-  border: 2px solid transparent;
-  border-bottom-color: #3f3d3d;
-  padding: .2rem 0;
+  width: 100%;
+  line-height: 24px;
+  padding: 10px 14px;
+  box-sizing: border-box;
+  border: 1px solid var(--line);
+  border-radius: var(--radius-sm);
   outline: none;
-  background-color: transparent;
-  color: #0d0c22;
-  transition: .3s cubic-bezier(0.645, 0.045, 0.355, 1);
+  background-color: #fafbfe;
+  color: var(--ink-1);
+  font-size: 14px;
+  transition: border-color .2s ease, background-color .2s ease, box-shadow .2s ease;
 }
 
-.input:focus,
-input:hover {
-  outline: none;
-  padding: .2rem 1rem;
-  border-radius: 1rem;
-  border-color: #4e0db6;
+.input:focus {
+  background-color: #fff;
+  border-color: var(--brand);
+  box-shadow: 0 0 0 3px var(--brand-100);
 }
 
 .input::placeholder {
-  color: #182322;
+  color: var(--ink-3);
 }
 
-.input:focus::placeholder {
-  opacity: 0;
-  transition: opacity .3s;
-}
-
-button {
-  font-family: monospace;
-  background-color: #ffffff;
-  color: #050e0f;
-  border: none;
-  border-radius: 8px;
-  width: 80px;
-  height: 35px;
-  transition: .3s;
-}
-
-button:hover {
-  background-color: #3b82f6;
-  box-shadow: 0 0 0 5px #3b83f65f;
+/* ===== 登录按钮：品牌橙 ===== */
+.login-btn {
+  width: 100%;
+  height: 42px;
+  margin-top: 22px;
+  font-weight: 600;
+  font-size: 15px;
   color: #fff;
+  background-color: var(--brand);
+  border: none;
+  border-radius: var(--radius-sm);
+  transition: background-color .2s ease, box-shadow .2s ease;
+}
+
+.login-btn:hover {
+  background-color: var(--brand-600);
+  box-shadow: 0 6px 16px rgba(255, 107, 53, .35);
+}
+
+/* 底部提示 */
+.tip {
+  margin-top: 18px;
+  text-align: center;
+  font-size: 12px;
+  color: var(--ink-3);
 }
 </style>

@@ -28,44 +28,57 @@ function exit() {
 </script>
 
 <style scoped>
+/* ===== 顶栏：色值与侧栏统一（--panel-dark），头部弱化装饰 ===== */
 .grzx {
-  font-size: 20px;
-  margin-top: 20px;
-  color: rgb(155, 143, 147);
-  border: none;
+  font-size: 15px;
+  color: #d7dce8;
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  height: 60px;
+  padding: 0 14px;
+  border-radius: 8px;
+  outline: none;
+  transition: background-color .2s ease, color .2s ease;
+}
+
+.grzx:hover {
+  background-color: rgba(255, 255, 255, .08);
+  color: #ffffff;
 }
 
 .head {
   height: 60px;
-  line-height: 60px;
-  background-color: #2c3346;
-  color: white;
+  background-color: var(--panel-dark);
+  color: #ffffff;
   display: flex;
   justify-content: space-between;
   align-items: center;
+  padding: 0 8px;
 }
 
 .l-s {
-  margin-left: 10px;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-left: 8px;
+  color: #aeb4c5;
+  font-size: 14px;
+}
+
+.l-s::before {
+  content: '流浪猫狗之家 · 后台管理';
+  letter-spacing: .5px;
 }
 
 .r-p {
-  margin-right: 20px;
+  margin-right: 12px;
 }
 
 .r-p img {
-  margin-top: 10px;
   height: 40px;
   width: 40px;
   border-radius: 50%;
-
-}
-
-.example-showcase .el-dropdown-link {
-  cursor: pointer;
-  color: var(--el-color-primary);
-  display: flex;
-  align-items: center;
 }
 
 a {

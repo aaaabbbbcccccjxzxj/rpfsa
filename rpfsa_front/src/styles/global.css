@@ -1,0 +1,227 @@
+/* =====================================================================
+ * RPFSA 用户端设计系统（2026 重做版）
+ * 设计 tokens 在这里唯一定义；各组件只消费变量，不再写死色值。
+ * 品牌主色取暖橙（呼应"流浪之家"的温度感），配合柔和奶油底色、
+ * 大圆角卡片与轻盈阴影，营造"温暖、可信、有爱心"的平台气质。
+ * ===================================================================== */
+
+:root {
+    /* 品牌色 */
+    --brand: #ff6b35;
+    --brand-600: #f25b26;
+    --brand-700: #d94c1c;
+    --brand-100: #fff1ea;
+    --brand-200: #ffe0d1;
+    --brand-300: #ffc9ae;
+    --brand-gradient: linear-gradient(135deg, #ff8a50 0%, #ff6b35 55%, #f25b26 100%);
+    --brand-gradient-soft: linear-gradient(135deg, #fff1ea 0%, #ffe7d6 100%);
+
+    /* 辅助色（榜单元件 / 标签点缀） */
+    --gold: #f7b500;
+    --silver: #9aa5b1;
+    --bronze: #d08a4e;
+    --green: #2fbf71;
+    --green-100: #e6f8ef;
+
+    /* 文字 */
+    --ink-1: #1f2533;
+    --ink-2: #4a5163;
+    --ink-3: #8a91a5;
+
+    /* 面板与线 */
+    --line: #eceef5;
+    --bg: #f7f6f4;
+    --card: #ffffff;
+
+    /* 圆角 / 阴影 */
+    --radius-sm: 10px;
+    --radius: 16px;
+    --radius-lg: 22px;
+    --radius-xl: 28px;
+    --shadow-sm: 0 1px 2px rgba(31, 37, 51, .05), 0 1px 6px rgba(31, 37, 51, .04);
+    --shadow: 0 2px 8px rgba(31, 37, 51, .06), 0 12px 32px rgba(31, 37, 51, .08);
+    --shadow-lg: 0 8px 20px rgba(31, 37, 51, .08), 0 24px 56px rgba(31, 37, 51, .12);
+    --shadow-brand: 0 8px 24px rgba(255, 107, 53, .32);
+
+    --font: -apple-system, BlinkMacSystemFont, "Segoe UI", "PingFang SC",
+        "Hiragino Sans GB", "Microsoft YaHei", "Helvetica Neue", Arial, sans-serif;
+
+    /* 接管 Element Plus 主题：让全站控件自动跟随品牌色与圆角 */
+    --el-color-primary: var(--brand);
+    --el-color-primary-light-3: #ff9670;
+    --el-color-primary-light-5: #ffb59c;
+    --el-color-primary-light-7: #ffd7c7;
+    --el-color-primary-light-8: #ffe4d9;
+    --el-color-primary-light-9: var(--brand-100);
+    --el-color-primary-dark-2: #e05526;
+    --el-border-color: #e4e7f0;
+    --el-border-color-light: #ebeef5;
+    --el-border-radius-base: 10px;
+    --el-font-family: var(--font);
+    --el-text-color-primary: var(--ink-1);
+    --el-text-color-regular: var(--ink-2);
+}
+
+html {
+    scroll-behavior: smooth;
+}
+
+body {
+    margin: 0;
+    font-family: var(--font);
+    color: var(--ink-1);
+    background:
+        radial-gradient(900px 420px at 100% 0%, rgba(255, 224, 209, .35) 0%, transparent 55%),
+        var(--bg);
+    -webkit-font-smoothing: antialiased;
+    text-rendering: optimizeLegibility;
+}
+
+img {
+    max-width: 100%;
+}
+
+::selection {
+    background: var(--brand-200);
+}
+
+/* 细滚动条（桌面端），移动端保持系统滚动 */
+*::-webkit-scrollbar {
+    width: 8px;
+    height: 8px;
+}
+
+*::-webkit-scrollbar-thumb {
+    background: #ccd2e0;
+    border-radius: 8px;
+}
+
+*::-webkit-scrollbar-thumb:hover {
+    background: #b0b8cc;
+}
+
+*::-webkit-scrollbar-track {
+    background: transparent;
+}
+
+/* ===== 通用容器：所有主页面用这一个类收口宽度与留白 ===== */
+.page-container {
+    max-width: 1200px;
+    margin: 0 auto;
+    padding: 28px 20px 64px;
+}
+
+/* ===== 通用卡片 ===== */
+.soft-card {
+    background: var(--card);
+    border: 1px solid var(--line);
+    border-radius: var(--radius);
+    box-shadow: var(--shadow-sm);
+    transition: box-shadow .25s ease, transform .25s ease;
+}
+
+/* ===== 通用区块标题：左侧品牌装饰条 ===== */
+.section-head {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    margin: 0 0 18px;
+}
+
+.section-head::before {
+    content: '';
+    width: 5px;
+    height: 20px;
+    border-radius: 4px;
+    background: var(--brand-gradient);
+    flex-shrink: 0;
+}
+
+.section-head .section-title {
+    font-size: 20px;
+    font-weight: 700;
+    color: var(--ink-1);
+    margin: 0;
+    letter-spacing: .5px;
+}
+
+.section-head .section-more {
+    margin-left: auto;
+    font-size: 13px;
+    color: var(--ink-3);
+    text-decoration: none;
+    transition: color .2s ease;
+}
+
+.section-head .section-more:hover {
+    color: var(--brand);
+}
+
+/* ===== 空状态 ===== */
+.empty-state {
+    padding: 40px 0;
+    text-align: center;
+    color: var(--ink-3);
+    font-size: 14px;
+}
+
+/* ===== 页面进入动画 ===== */
+@keyframes fade-up {
+    from {
+        opacity: 0;
+        transform: translateY(16px);
+    }
+
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+.fade-up {
+    animation: fade-up .45s ease both;
+}
+
+/* ===== Element Plus 控件统一修饰（只动观感，不动行为） ===== */
+.el-dialog {
+    border-radius: var(--radius-lg) !important;
+}
+
+.el-card {
+    border-radius: var(--radius-lg);
+    border: 1px solid var(--line);
+    box-shadow: var(--shadow-sm) !important;
+}
+
+.el-table {
+    --el-table-header-bg-color: #fafbfe;
+    --el-table-header-text-color: var(--ink-2);
+    border-radius: var(--radius-sm);
+    overflow: hidden;
+}
+
+.el-pagination {
+    --el-pagination-button-bg-color: #ffffff;
+}
+
+/* 弹层遮罩与过渡更柔和 */
+.el-overlay {
+    backdrop-filter: blur(3px);
+    background-color: rgba(31, 37, 51, .42);
+}
+
+/* 主按钮统一带一点品牌投影 */
+.el-button--primary:not(.is-link):not(.is-text):not(.is-plain) {
+    box-shadow: 0 4px 12px rgba(255, 107, 53, .24);
+}
+
+/* 响应式基础：小屏下收窄容器留白 */
+@media (max-width: 768px) {
+    .page-container {
+        padding: 16px 14px 48px;
+    }
+
+    .section-head .section-title {
+        font-size: 17px;
+    }
+}

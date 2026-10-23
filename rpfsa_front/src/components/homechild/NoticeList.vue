@@ -1,12 +1,20 @@
 <template>
-    <div class="section announcement-section">
-        <h2>{{ classic == 0 ? '网站公告' : classic == 1 ? '领养救助指南' : '近期新闻' }}</h2>
-        <ul class="content-list">
-            <li v-for="web in webannounce" :key="web.id">
-                <RouterLink :to="`/postdetail/${web.id}`">{{ web.title }}</RouterLink>
-                <p class="timestamp">{{ web.createTime }}</p>
-            </li>
-        </ul>
+    <div class="page-container fade-up">
+        <div class="notice-card soft-card">
+            <div class="section-head">
+                <h3 class="section-title">{{ classic == 0 ? '网站公告' : classic == 1 ? '领养救助指南' : '近期新闻' }}</h3>
+            </div>
+            <ul class="notice-list">
+                <li v-for="web in webannounce" :key="web.id" class="notice-item">
+                    <RouterLink :to="`/postdetail/${web.id}`" class="notice-link">
+                        <span class="notice-dot"></span>
+                        <span class="notice-title">{{ web.title }}</span>
+                        <span class="notice-time">{{ web.createTime }}</span>
+                    </RouterLink>
+                </li>
+                <li v-if="webannounce.length === 0" class="empty-state">暂无内容</li>
+            </ul>
+        </div>
     </div>
 </template>
 
@@ -23,70 +31,74 @@ const { classic } = defineProps(['classic'])
 const webannounce = ref([])
 function getclassicpost() {
     axios.get(`/post/alltypeone/${classic}`).then((res) => {
-        console.log(res.data.data);
         webannounce.value = res.data.data
     }).catch((err) => {
-        console.log(err);
     })
 }
 //#endregion
 </script>
 
 <style scoped>
-.section {
-    background-color: #f5f5f5;
-    padding: 20px;
-    border-radius: 4px;
-    display: flex;
-    flex-direction: column;
-    justify-content: space-between;
-    box-shadow: 0 2px 6px rgba(0, 0, 0, 0.1);
+.notice-card {
+    max-width: 860px;
+    margin: 0 auto;
+    padding: 26px 30px;
 }
 
-.section h2 {
-    font-size: 20px;
-    margin-bottom: 10px;
-}
-
-/* 过渡动画 */
-.section {
-    transition: box-shadow 0.3s ease;
-}
-
-.section:hover {
-    box-shadow: 0 4px 10px rgba(0, 0, 0, 0.2);
-}
-
-.content-list {
-    list-style-type: none;
+.notice-list {
+    list-style: none;
+    margin: 0;
     padding: 0;
 }
 
-.content-list li {
-    background-color: #f5f5f5;
-    padding: 10px;
-    margin-bottom: 10px;
-    border-radius: 4px;
-    box-shadow: 0 2px 6px rgba(0, 0, 0, 0.1);
-    transition: box-shadow 0.3s ease;
+.notice-item {
+    border-bottom: 1px dashed var(--line);
 }
 
-.content-list li:hover {
-    box-shadow: 0 4px 10px rgba(0, 0, 0, 0.2);
+.notice-item:last-child {
+    border-bottom: none;
 }
 
-.content-list li a {
+.notice-link {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 14px 8px;
     text-decoration: none;
-    color: #333;
+    border-radius: var(--radius-sm);
+    transition: background-color .2s ease;
 }
 
-.content-list li a:hover {
-    color: #666;
+.notice-link:hover {
+    background: var(--brand-100);
 }
 
-.timestamp {
-    float: right;
-    color: #999;
+.notice-dot {
+    flex-shrink: 0;
+    width: 7px;
+    height: 7px;
+    border-radius: 50%;
+    background: var(--brand);
+}
+
+.notice-title {
+    flex: 1;
+    min-width: 0;
+    color: var(--ink-1);
+    font-size: 15px;
+    font-weight: 500;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.notice-link:hover .notice-title {
+    color: var(--brand);
+}
+
+.notice-time {
+    flex-shrink: 0;
     font-size: 12px;
+    color: var(--ink-3);
 }
 </style>

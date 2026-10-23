@@ -1,4 +1,9 @@
 <template>
+    <div class="page-head">
+        <h2 class="page-title">发帖管理</h2>
+        <span class="page-desc">社区帖子内容管理</span>
+    </div>
+    <div class="panel">
     <!-- 操作栏 -->
     <div>
         <el-button type="primary" plain @click="isaddpoot = true" style="margin-right: 30px;">
@@ -10,7 +15,7 @@
     </div>
     <!-- 表格数据 -->
     <el-table :data="tableData" style="width: 100%;padding-top: 5px;" height="570" stripe highlight-current-row>
-        <el-table-column label="帖子标题" width="180" align="center">
+        <el-table-column label="帖子标题" min-width="180" align="center">
             <template #="scope">
                 <el-text truncated>{{ scope.row.title }}</el-text>
             </template>
@@ -47,7 +52,7 @@
         </el-table-column>
     </el-table>
     <!-- 分页 -->
-    <div style="margin:10px 20px; float:right;">
+    <div class="pager-row">
         <el-pagination v-model:current-page="currentpage" :background="true" layout="prev, pager, next" :page-count="pages"
             @current-change="handleCurrentChange" />
     </div>
@@ -93,6 +98,7 @@
         <div>昵称：{{ whospost.user.nickname }}</div>
         <div>时间：{{ whospost.createTime }}</div>
     </el-dialog>
+    </div>
 </template>
 
 <script setup>
@@ -126,7 +132,6 @@ function conditionquery(col, con) {
                 pages.value = res.data.data.pages
             } else ElMessage.error('查询结果为空')
         }).catch(err => {
-            console.error(err);
         })
 }
 //#endregion
@@ -170,11 +175,9 @@ function addpost() {
     axios.post('/post', postinfo)
         .then(res => {
             isaddpoot.value = false
-            console.log(res)
             postget()
         })
         .catch(err => {
-            console.error(err);
         })
 }
 //#endregion
@@ -187,12 +190,10 @@ function deletepost(id) {
     }).then(() => {
         axios.delete(`/post/${id}`)
             .then(res => {
-                console.log(res)
                 postget()
                 ElMessage.success('删除成功')
             })
             .catch(err => {
-                console.error(err);
             })
 
     }).catch(() => {
@@ -224,7 +225,6 @@ function postget() {
             pages.value = res.data.data.pages
         })
         .catch(err => {
-            console.error(err);
         })
 }
 //#endregion
@@ -264,7 +264,6 @@ function classicshow(value) {
     return classic
 }
 function filterTag(value, row) {
-    console.log(row.classic, value);
     return row.classic == value
 }
 //#endregion

@@ -1,21 +1,29 @@
 <template>
-    <div>
-        <div style="text-align: right;">
-            <el-button v-if="currentUser != null && currentUser.id == currentpet.uid" @click="isadddiary = true">添加动态
-            </el-button>
-        </div>
-        <!-- <div v-for="diary in diarylist" :key="diary.id">
-        <el-link type="primary" @click="showdiary(diary)">{{ diary.title }}</el-link>
-        <el-link v-if="currentUser != null && currentUser.id == currentpet.uid" type="danger"
-            @click="deletediary(diary.id)">删除
-        </el-link> &nbsp 时间:{{ diary.createTime }}
-    </div> -->
-        <div v-for="diary in diarylist" :key="diary.id" class="diary-item">
-            <span class="diary-title" @click="showdiary(diary)">{{ diary.title }}</span>
-            <el-link v-if="currentUser != null && currentUser.id == currentpet.uid" type="danger"
-                @click="deletediary(diary.id)">删除
-            </el-link>
-            <div class="diary-time">{{ diary.createTime }}</div>
+    <div class="page-container fade-up">
+        <div class="diary-card soft-card">
+            <div class="section-head">
+                <h3 class="section-title">日记动态</h3>
+                <el-button v-if="currentUser != null && currentUser.id == currentpet.uid" type="primary" round
+                    size="small" @click="isadddiary = true">
+                    + 添加动态
+                </el-button>
+            </div>
+            <!-- 时间线 -->
+            <div class="timeline">
+                <div v-for="diary in diarylist" :key="diary.id" class="timeline-item">
+                    <div class="timeline-dot"></div>
+                    <div class="timeline-body">
+                        <div class="timeline-row">
+                            <span class="diary-title" @click="showdiary(diary)">{{ diary.title }}</span>
+                            <el-link v-if="currentUser != null && currentUser.id == currentpet.uid" type="danger"
+                                class="diary-delete" @click="deletediary(diary.id)">删除
+                            </el-link>
+                        </div>
+                        <div class="diary-time">{{ diary.createTime }}</div>
+                    </div>
+                </div>
+                <div v-if="diarylist.length === 0" class="empty-state">还没有动态，期待第一篇日记～</div>
+            </div>
         </div>
     </div>
     <!-- 添加动态弹层 -->
@@ -40,7 +48,7 @@
     <!-- 动态详情 -->
     <el-dialog v-model="diaryVisible" title="动态内容" fullscreen>
 
-        <div class="ql-editor" v-html="diary.value.diary"></div>
+        <div class="ql-editor" v-html="diary.diary"></div>
 
     </el-dialog>
 </template>
@@ -78,8 +86,9 @@ const toolbarinfo = [
 ]
 //#endregion
 
-//#region 添加动态
+//#region 添加动态（publishing 防重复提交；回访日记奖励由后端判定发放）
 const isadddiary = ref(false)
+const publishing = ref(false)
 const diaryinfo = reactive({
     uid: null,
     pid: pid,
@@ -90,13 +99,14 @@ function adddiary() {
     if (diaryinfo.title == '' || diaryinfo.diary == '') {
         ElMessage.warning('标题和内容不能为空！')
     } else {
-        ElMessageBox.confirm('您确定要发布吗？', '确认发布', {
+        ElMessageBox.confirm('您确定要发布吗？领养宠物的回访日记可获得 +5 宠宠币奖励', '确认发布', {
             cancelButtonText: '继续编辑',
             confirmButtonText: '确定',
             type: 'info'
         }).then(() => {
+            if (publishing.value) return
+            publishing.value = true
             diaryinfo.uid = currentUser.id
-            console.log(diaryinfo);
             axios.post('/journal', diaryinfo)
                 .then(res => {
                     if (res.data.code == 200) {
@@ -105,8 +115,8 @@ function adddiary() {
                     isadddiary.value = false
                 })
                 .catch(err => {
-                    console.error(err);
                 }).finally(() => {
+                    publishing.value = false
                     getdiatylist()
                 })
         }).catch(() => { })
@@ -119,10 +129,8 @@ const { pid } = defineProps(['pid'])
 const diarylist = ref([])
 function getdiatylist() {
     axios.get(`/journal/${pid}`).then((res) => {
-        console.log(res.data.data);
         diarylist.value = res.data.data
     }).catch((err) => {
-        console.log(err);
     })
 }
 const currentpet = ref({
@@ -148,7 +156,6 @@ function deletediary(id) {
         confirmButtonText: '确定',
         type: 'warning'
     }).then(() => {
-        console.log(id);
         axios.delete(`/journal/${id}`)
             .then(res => {
                 if (res.data.code == 200) {
@@ -156,7 +163,6 @@ function deletediary(id) {
                 } else ElMessage.error(res.data.msg)
             })
             .catch(err => {
-                console.error(err);
             }).finally(() => {
                 getdiatylist()
             })
@@ -165,7 +171,9 @@ function deletediary(id) {
 //#endregion
 
 const diaryVisible = ref(false)
-const diary = reactive({})
+// 用 ref 存放"当前查看的动态"。原写法是 reactive({}) 再挂一个 value 属性，
+// 模板里又写 diary.value.diary —— 能跑但语义完全错误，稍一改动就会静默失效。
+const diary = ref({})
 function showdiary(dia) {
     diary.value = dia
     diaryVisible.value = true
@@ -173,40 +181,100 @@ function showdiary(dia) {
 
 
 const currentUser = reactive(JSON.parse(sessionStorage.getItem("user")))
-function getimgurl(url) { return new URL(`img/${url}`, 'http://localhost/') }
 
 </script>
 
 <style scoped>
-.diary-item {
-    background-color: #f5f5f5;
-    border-radius: 8px;
-    padding: 15px;
-    margin-bottom: 20px;
-    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
-    transition: transform 0.3s ease;
+.diary-card {
+    max-width: 860px;
+    margin: 0 auto;
+    padding: 26px 30px;
 }
 
-.diary-item:hover {
-    transform: translateY(-5px);
+/* 让"添加动态"按钮贴到标题行右侧 */
+.section-head {
+    display: flex;
+    align-items: center;
+}
+
+.section-head .el-button {
+    margin-left: auto;
+}
+
+/* ===== 时间线 ===== */
+.timeline {
+    position: relative;
+    padding-left: 22px;
+}
+
+.timeline::before {
+    content: '';
+    position: absolute;
+    left: 6px;
+    top: 6px;
+    bottom: 6px;
+    width: 2px;
+    border-radius: 2px;
+    background: linear-gradient(to bottom, var(--brand-200), var(--line));
+}
+
+.timeline-item {
+    position: relative;
+    padding-bottom: 20px;
+}
+
+.timeline-dot {
+    position: absolute;
+    left: -22px;
+    top: 7px;
+    width: 14px;
+    height: 14px;
+    border-radius: 50%;
+    background: #fff;
+    border: 3px solid var(--brand);
+    box-shadow: 0 0 0 3px var(--brand-100);
+}
+
+.timeline-body {
+    background: #fafbfe;
+    border: 1px solid var(--line);
+    border-radius: var(--radius);
+    padding: 14px 18px;
+    transition: box-shadow .25s ease, transform .25s ease;
+}
+
+.timeline-body:hover {
+    box-shadow: var(--shadow-sm);
+    transform: translateX(3px);
+}
+
+.timeline-row {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
 }
 
 .diary-title {
-    font-size: 18px;
-    font-weight: bold;
-    margin-bottom: 10px;
-    margin-right: 30px;
-    color: #333333;
+    font-size: 16px;
+    font-weight: 600;
+    color: var(--ink-1);
     cursor: pointer;
+    transition: color .2s ease;
+}
+
+.diary-title:hover {
+    color: var(--brand);
+}
+
+.diary-delete {
+    flex-shrink: 0;
+    font-size: 13px;
 }
 
 .diary-time {
-    margin-top: 10px;
-    font-size: 14px;
-    color: #666666;
-}
-
-.diary-item {
-    animation: fadeIn 0.5s ease;
+    margin-top: 6px;
+    font-size: 12px;
+    color: var(--ink-3);
 }
 </style>

@@ -1,4 +1,9 @@
 <template>
+    <div class="page-head">
+        <h2 class="page-title">救助记录</h2>
+        <span class="page-desc">用户捐助明细与分配状态</span>
+    </div>
+    <div class="panel">
     <!-- 搜索和刷新 -->
     <el-input v-model="searchinfo.con" placeholder="请输入" class="input-with-select" style="width: 300px;">
         <template #prepend>
@@ -11,12 +16,15 @@
     </el-input>
     <el-button :icon="Search" type="success" @click="fsearch" style="margin-left: 5px;" />
     <el-button :icon="Refresh" type="warning" @click="flush" style="margin-left: 20px;" />
+    <el-button :icon="Download" type="primary" plain :loading="exporting" @click="exportCsv" style="margin-left: 20px;">
+        导出 CSV
+    </el-button>
 
     <!-- 表格数据 -->
     <el-table :data="donates" style="width: 100%;padding-top: 5px;" height="570" stripe highlight-current-row>
-        <el-table-column prop="username" label="用户名" width="150" align="center"></el-table-column>
+        <el-table-column prop="username" label="用户名" min-width="150" align="center"></el-table-column>
         <el-table-column prop="nickname" label="昵称" width="150" align="center"></el-table-column>
-        <el-table-column prop="petname" label="宠物名" width="150" align="center"></el-table-column>
+        <el-table-column prop="petname" label="宠物名" min-width="150" align="center"></el-table-column>
 
         <el-table-column label="捐助详细" width="150" align="center">
             <template #="scope">
@@ -40,7 +48,7 @@
     </el-table>
 
     <!-- 分页 -->
-    <div style="margin:10px 20px; float:right;">
+    <div class="pager-row">
         <el-pagination v-model:current-page="currentpage" :background="true" layout="prev, pager, next" :page-count="pages"
             @current-change="handleCurrentChange" />
     </div>
@@ -57,6 +65,7 @@
         </div>
         <div style="float: right;">一共{{ totalprcie }}宠宠币</div>
     </el-dialog>
+    </div>
 </template>
 
 <script setup>
@@ -64,7 +73,26 @@ import axios from 'axios';
 import { onMounted, ref, reactive } from 'vue';
 import { Check } from '@element-plus/icons-vue'
 import { ElMessageBox, ElMessage } from 'element-plus';
-import { Search, Refresh } from '@element-plus/icons-vue'
+import { Search, Refresh, Download } from '@element-plus/icons-vue'
+
+//#region 导出 CSV（axios blob 下载，携带管理员 token）
+const exporting = ref(false)
+function exportCsv() {
+    if (exporting.value) return
+    exporting.value = true
+    axios.get('/admin/export/donates', { responseType: 'blob' }).then(res => {
+        const url = URL.createObjectURL(new Blob([res.data], { type: 'text/csv;charset=UTF-8' }))
+        const a = document.createElement('a')
+        a.href = url
+        a.download = 'donates.csv'
+        a.click()
+        URL.revokeObjectURL(url)
+        ElMessage.success('导出成功')
+    }).catch(() => {
+        ElMessage.error('导出失败')
+    }).finally(() => exporting.value = false)
+}
+//#endregion
 
 //#region 模糊查询
 const searchinfo = reactive({
@@ -87,7 +115,6 @@ function fsearch() {
                 for (let i = 0; i < donates.value.length; i++) donates.value[i].donateList = JSON.parse(donates.value[i].donateList)
             } else ElMessage.error(res.data.msg)
         }).catch(err => {
-            console.error(err);
         })
 }
 //#endregion
@@ -111,7 +138,6 @@ function listdetail(list, total) {
 function donateget() {
     axios.get(`donate/page/${currentpage.value}`).then((res) => {
         if (res.data.code == 200) {
-            console.log(res.data.data);
             pages.value = res.data.data.pages
             donates.value = res.data.data.records
             for (let i = 0; i < donates.value.length; i++) donates.value[i].donateList = JSON.parse(donates.value[i].donateList)

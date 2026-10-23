@@ -1,4 +1,9 @@
 <template>
+    <div class="page-head">
+        <h2 class="page-title">救助品管理</h2>
+        <span class="page-desc">救助物资、库存与价格维护</span>
+    </div>
+    <div class="panel">
     <!-- 添加 -->
     <el-button type="primary" plain @click="tanchu" style="margin-right: 30px;">
         添加救助品
@@ -16,9 +21,9 @@
                 <el-input v-model="foodinfo.price" type="number" />
             </el-form-item>
             <el-form-item class="efi" label="照片:">
-                <el-upload ref="uploadRef" class="avatar-uploader" action="http://localhost/upload" :show-file-list="false"
-                    :on-success="handleAvatarSuccess" :on-change="changeAvatar" :auto-upload="false"
-                    :before-upload="beforeAvatarUpload">
+                <el-upload ref="uploadRef" class="avatar-uploader" :action="uploadUrl" :headers="uploadHeaders()"
+                    :on-error="uploadError" :show-file-list="false" :on-success="handleAvatarSuccess" :on-change="changeAvatar"
+                    :auto-upload="false" :before-upload="beforeAvatarUpload">
                     <img v-if="imageUrl" :src="imageUrl" class="avatar" />
                     <el-icon v-else class="avatar-uploader-icon">
                         <Plus />
@@ -35,10 +40,10 @@
     </el-dialog>
     <!-- 表格数据 -->
     <el-table :data="tableData" style="width: 100%;padding-top: 5px;" height="570" stripe highlight-current-row>
-        <el-table-column prop="foodname" label="名字" width="150" align="center"></el-table-column>
-        <el-table-column label="图片" width="150" align="center">
+        <el-table-column prop="foodname" label="名字" min-width="150" align="center"></el-table-column>
+        <el-table-column label="图片" min-width="150" align="center">
             <template #="scope">
-                <el-image :src="`http://localhost/img/${scope.row.picture}`" />
+                <el-image :src="resolveImg(scope.row.picture)" />
             </template>
         </el-table-column>
         <el-table-column prop="price" label="单价" width="150" align="center"></el-table-column>
@@ -63,11 +68,11 @@
                 <el-input v-model="copyfood.value.price" type="number" />
             </el-form-item>
             <el-form-item class="efi" label="照片:">
-                <el-upload ref="updateRef" class="avatar-uploader" action="http://localhost/upload" :show-file-list="false"
-                    :on-success="updateAvatarSuccess" :on-change="changeAvatar" :auto-upload="false"
-                    :before-upload="beforeAvatarUpload">
+                <el-upload ref="updateRef" class="avatar-uploader" :action="uploadUrl" :headers="uploadHeaders()"
+                    :on-error="uploadError" :show-file-list="false" :on-success="updateAvatarSuccess" :on-change="changeAvatar"
+                    :auto-upload="false" :before-upload="beforeAvatarUpload">
                     <img v-if="imageUrl" :src="imageUrl" class="avatar" />
-                    <img v-else :src="`http://localhost/img/${copyfood.value.picture}`" class="avatar" />
+                    <img v-else :src="resolveImg(copyfood.value.picture)" class="avatar" />
                 </el-upload>
             </el-form-item>
         </el-form>
@@ -78,6 +83,7 @@
             </span>
         </template>
     </el-dialog>
+    </div>
 </template>
 
 <script setup>
@@ -85,6 +91,9 @@ import axios from 'axios'
 import { reactive, ref, onMounted } from 'vue';
 import { Plus, Delete } from '@element-plus/icons-vue'
 import { ElMessage, ElMessageBox } from 'element-plus'
+import { resolveImg, resolveUploadUrl, uploadHeaders, uploadError } from '@/utils/url'
+
+const uploadUrl = resolveUploadUrl()
 
 onMounted(() => {
     foodget()
@@ -98,7 +107,6 @@ function foodget() {
             if (res.data.code == 200) tableData.value = res.data.data
             else ElMessage.warning(res.data.msg)
         }).catch(err => {
-            console.error(err);
         })
 }
 //#endregion

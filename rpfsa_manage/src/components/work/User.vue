@@ -1,4 +1,9 @@
 <template>
+    <div class="page-head">
+        <h2 class="page-title">用户管理</h2>
+        <span class="page-desc">平台注册用户的信息、权限与消息</span>
+    </div>
+    <div class="panel">
     <!-- 操作栏 -->
     <div>
         <!-- 添加用户 -->
@@ -23,14 +28,14 @@
     <!-- 列表数据 -->
     <el-table :data="tableData" style="width: 100%;padding-top: 5px;" height="570" stripe highlight-current-row>
         <el-table-column prop="username" label="用户名" width="100" align="center" />
-        <el-table-column prop="nickname" label="昵称" width="180" align="center" />
-        <el-table-column prop="photo" label="头像" width="auto" align="center">
+        <el-table-column prop="nickname" label="昵称" min-width="180" align="center" />
+        <el-table-column prop="photo" label="头像" width="80" align="center">
             <template #="scope">
-                <el-image style="width: 50px; height: 55px;" :src="getImageUrl(scope.row.photo)"
-                    :preview-src-list="[getImageUrl(scope.row.photo)]" preview-teleported="true" />
+                <el-image style="width: 50px; height: 55px;" :src="resolveImg(scope.row.photo)"
+                    :preview-src-list="[resolveImg(scope.row.photo)]" preview-teleported="true" />
             </template>
         </el-table-column>
-        <el-table-column prop="email" label="邮箱" width="180" align="center" />
+        <el-table-column prop="email" label="邮箱" min-width="180" align="center" />
         <el-table-column prop="phone" label="电话" width="120" align="center" />
         <el-table-column prop="comPermiss" label="权限" width="80" align="center">
             <template #="scope">
@@ -46,7 +51,7 @@
             <template #="scope">
                 <el-button type="primary" :icon="Expand" size="small" @click="edituser(scope.row)" />
                 <el-button type="danger" :icon="Delete" size="small" @click="deleteuser(scope.row.id)" />
-                <el-badge :value="scope.row.newmessage" class="item">
+                <el-badge :value="scope.row.noReadCount || undefined" class="item">
                     <el-button style="margin-left: 12px; margin-bottom: 10px;" type="info" :icon="ChatDotSquare"
                         size="small" @click="sendmessageopen(scope.row.id, scope.$index)" />
                 </el-badge>
@@ -54,7 +59,7 @@
         </el-table-column>
     </el-table>
     <!-- 分页 -->
-    <div style="margin:10px 20px; float:right;">
+    <div class="pager-row">
         <el-pagination v-model:current-page="currentpage" :background="true" layout="prev, pager, next" :page-count="pages"
             @current-change="handleCurrentChange" />
     </div>
@@ -72,9 +77,9 @@
                 <el-input v-model="userinfo.phone" />
             </el-form-item>
             <el-form-item label="头像:">
-                <el-upload ref="uploadRef" class="avatar-uploader" action="http://localhost/upload" :show-file-list="false"
-                    :on-success="handleAvatarSuccess" :on-change="changeAvatar" :auto-upload="false"
-                    :before-upload="beforeAvatarUpload">
+                <el-upload ref="uploadRef" class="avatar-uploader" :action="uploadUrl" :headers="uploadHeaders()"
+                    :on-error="uploadError" :show-file-list="false" :on-success="handleAvatarSuccess" :on-change="changeAvatar"
+                    :auto-upload="false" :before-upload="beforeAvatarUpload">
                     <img v-if="imageUrl" :src="imageUrl" class="avatar" />
                     <el-icon v-else class="avatar-uploader-icon">
                         <Plus />
@@ -126,34 +131,41 @@
     </el-dialog>
     <!-- 发送message -->
     <el-dialog v-model="dialogsendVisible" @open="gun" style="border-radius: 20px; width: 650px;"
+        :title="chatUser ? `与 ${chatUser.nickname || chatUser.username} 的对话` : '对话'"
         @close="removenewmessage()">
         <!-- 展示message列表 -->
-        <div id="messagesroll" class="el-dialog-div">
+        <div id="messagesroll" class="el-dialog-div chat-area">
+            <div v-if="messagelist.length === 0" class="chat-empty">暂无对话记录</div>
             <div v-for="message in messagelist" :key="message.id">
-                <span v-if="message.content != null" style="text-align: right;">
-                    <div style="margin-right: 20px;font-size: larger;">{{ message.content }}</div>
-                    <div style="margin-right: 20px;">{{ message.createTime }} </div>
-                    <hr>
-                </span>
-                <span v-else>
-                    <div :class="isred(message.isRead)">
-                        <div> 用户:</div>
-                        <div style="font-size: larger;">{{ message.userReply }}</div>
-                        <div>{{ message.createTime }}</div>
+                <!-- 管理员消息（右侧） -->
+                <div v-if="message.content != null" class="chat-row mine">
+                    <div class="chat-bubble mine">
+                        <div class="chat-content">{{ message.content }}</div>
+                        <div class="chat-time mine">{{ message.createTime }}</div>
                     </div>
-
-                    <hr>
-                </span>
+                    <div class="chat-avatar admin-avatar">管</div>
+                </div>
+                <!-- 用户消息（左侧） -->
+                <div v-else class="chat-row">
+                    <el-avatar :size="38" :src="resolveImg(chatUser && chatUser.photo)" class="chat-avatar" />
+                    <div class="chat-bubble">
+                        <div class="chat-sender">{{ chatUser ? (chatUser.nickname || chatUser.username) : '用户' }}</div>
+                        <div class="chat-content">{{ message.userReply }}</div>
+                        <div class="chat-time">{{ message.createTime }}</div>
+                    </div>
+                </div>
             </div>
         </div>
         <template #footer>
-            <el-input v-model="sendinfo.content" type="textarea" :rows="3" style="margin-bottom: 20px;" />
+            <el-input v-model="sendinfo.content" type="textarea" :rows="3" style="margin-bottom: 20px;"
+                placeholder="回复用户消息（Ctrl+Enter 发送）" @keyup.ctrl.enter="sendmessage" />
             <span>
                 <el-button @click="dialogsendVisible = false">关闭</el-button>
-                <el-button type="primary" @click="sendmessage">发送</el-button>
+                <el-button type="primary" :loading="messageSending" @click="sendmessage">发送</el-button>
             </span>
         </template>
     </el-dialog>
+    </div>
 </template>
   
 <script setup >
@@ -161,6 +173,9 @@ import axios from 'axios'
 import { onMounted, reactive, ref } from 'vue';
 import { Expand, Delete, ChatDotSquare, Plus, Search, Refresh } from '@element-plus/icons-vue'
 import { ElMessage, ElMessageBox } from 'element-plus'
+import { resolveImg, resolveUploadUrl, uploadHeaders, uploadError } from '@/utils/url'
+
+const uploadUrl = resolveUploadUrl()
 
 onMounted(() => {
     userget()
@@ -172,21 +187,15 @@ const searchinfo = reactive({
     con: null
 })
 function fsearch() {
-    axios.get(`/user/${currentpage.value}/${searchinfo.col}/${searchinfo.con}`)
+    // 用户管理接口已从 /user/** 收敛到 /admin/users/**，以便做管理员角色隔离
+    axios.get(`/admin/users/${currentpage.value}/${searchinfo.col}/${searchinfo.con}`)
         .then(res => {
             if (res.data.code == 200) {
                 tableData.value = res.data.data.records
                 pages.value = res.data.data.pages
-                for (let i = 0; i < tableData.value.length; i++) {
-                    axios.get(`/message/noread/${tableData.value[i].id}/admin`).then(res => {
-                        Reflect.set(tableData.value[i], "newmessage", res.data.data != 0 ? res.data.data : undefined)
-                    })
-                }
             } else {
-                ElMessage.error(res.data.msg)
+                ElMessage.warning(res.data.msg)
             }
-        }).catch(err => {
-            console.error(err);
         })
 }
 //刷新
@@ -196,9 +205,6 @@ function flush() {
     userget()
 }
 //#endregion
-
-//vue3访问静态资源
-function getImageUrl(url) { return new URL(`img/${url}`, 'http://localhost/').href }
 
 //#region 用户展示
 //表格数据
@@ -215,15 +221,15 @@ function handleCurrentChange(currentpagec) {
 
 // 分页查询用户列表
 function userget() {
-    axios.get(`/user/page/${currentpage.value}`)
+    // 未读消息数（noReadCount）已由分页接口用一次聚合查询带回，
+    // 原先这里是"每一行单独发一个请求"的前端 N+1，一页 10 行就是 11 个请求。
+    axios.get(`/admin/users/${currentpage.value}`)
         .then(res => {
-            tableData.value = res.data.data.records
-            pages.value = res.data.data.pages
-            for (let i = 0; i < tableData.value.length; i++) {
-                //可以增加属性,卧槽,牛逼
-                axios.get(`/message/noread/${tableData.value[i].id}/admin`).then(res => {
-                    Reflect.set(tableData.value[i], "newmessage", res.data.data != 0 ? res.data.data : undefined)
-                })
+            if (res.data.code == 200) {
+                tableData.value = res.data.data.records
+                pages.value = res.data.data.pages
+            } else {
+                ElMessage.warning(res.data.msg)
             }
         })
 }
@@ -238,11 +244,13 @@ function edituser(user) {
     dialogFormVisible_x.value = true
 }
 function updateuser() {
-    axios.patch('/user', userinfo_x.value).then((res) => {
+    axios.patch('/admin/users', userinfo_x.value).then((res) => {
         if (res.data.code == 200) {
             ElMessage.success(res.data.msg)
             userget()
-        } else ElMessage.error(res.data.msg)
+        } else {
+            ElMessage.error(res.data.msg)
+        }
     })
     dialogFormVisible_x.value = false
 }
@@ -255,12 +263,14 @@ function deleteuser(id) {
         cancelButtonText: '取消',
         type: 'warning'
     }).then(() => {
-        axios.delete(`/user/${id}`)
+        axios.delete(`/admin/users/${id}`)
             .then((res) => {
                 if (res.data.code == 200) {
                     ElMessage.success(res.data.msg)
                     userget()
-                } else ElMessage.error(res.data.msg)
+                } else {
+                    ElMessage.error(res.data.msg)
+                }
             })
     }).catch(() => {
         ElMessage.info('已取消')
@@ -282,35 +292,47 @@ function gun() {
     }, 80)
 }
 const messagelist = ref([])
+const chatUser = ref(null)
+const messageSending = ref(false)
 function sendmessageopen(userid, index) {
     tempindex.value = index
     sendinfo.uid = userid
+    chatUser.value = tableData.value[index] || null
     //查询该用户的所有message
     axios.get(`/message/${userid}`)
         .then(res => {
             messagelist.value = res.data.data
         })
         .catch(err => {
-            console.error(err);
         })
     dialogsendVisible.value = true
 }
 const tempindex = ref()
 function removenewmessage() {
     axios.patch(`/message/${sendinfo.uid}/admin`)
-    console.log(tableData.value[tempindex.value]);
-    tableData.value[tempindex.value].newmessage = undefined
-    console.log(tableData.value[tempindex.value].newmessage);
+    // 直接改本行数据即可，不再依赖 Reflect.set 这种非常规写法
+    const row = tableData.value[tempindex.value]
+    if (row) {
+        row.noReadCount = undefined
+    }
 }
 function sendmessage() {
+    if (!sendinfo.content || !sendinfo.content.trim()) {
+        ElMessage.warning('消息内容不能为空')
+        return
+    }
+    if (messageSending.value) return
+    messageSending.value = true
     axios.post('/message', sendinfo)
         .then(() => {
             sendmessageopen(sendinfo.uid, tempindex.value)
             gun()
         })
         .catch(err => {
-            console.error(err);
-        }).finally(() => sendinfo.content = null)
+        }).finally(() => {
+            messageSending.value = false
+            sendinfo.content = null
+        })
 }
 function isred(is) {
     let color = ''
@@ -346,7 +368,7 @@ const imageUrl = ref('')
 const uploadRef = ref(null)
 function handleAvatarSuccess(response) {
     userinfo.photo = response
-    axios.post('/user', userinfo)
+    axios.post('/admin/users', userinfo)
         .then((res) => {
             if (res.data.code == 200) {
                 ElMessage.success(res.data.msg)
@@ -374,14 +396,16 @@ function beforeAvatarUpload(rawFile) {
 
 //#region 权限切换
 function closecomment(newval, id) {
-    //发送数据改变评论权限
-    axios.patch('/user', {
+    // 变更评论权限。带上 username 是因为该接口的更新逻辑以整行数据为准。
+    const row = tableData.value.find(item => item.id === id)
+    axios.patch('/admin/users', {
         id: id,
+        username: row ? row.username : null,
         comPermiss: newval
     }).then(() => {
         if (newval) ElMessage.success(`评论权限已打开\^o^/`)
         else ElMessage.warning('评论权限已关闭ಥ_ಥ')
-    }).catch(() => ElMessage.error('对不起,服务器故障！'))
+    }).catch(() => { /* 失败提示已由全局拦截器统一给出 */ })
 }
 
 //#endregion
@@ -413,6 +437,90 @@ function closecomment(newval, id) {
 .el-dialog-div {
     height: 40vh;
     overflow: auto;
+}
+
+/* ===== 消息气泡（与用户端同款聊天界面） ===== */
+.chat-area {
+    background: #f7f8fb;
+    border-radius: var(--radius);
+    padding: 16px 14px;
+}
+
+.chat-empty {
+    text-align: center;
+    color: var(--ink-3);
+    font-size: 13px;
+    padding: 30px 0;
+}
+
+.chat-row {
+    display: flex;
+    align-items: flex-start;
+    gap: 10px;
+    margin-bottom: 16px;
+}
+
+.chat-row.mine {
+    flex-direction: row-reverse;
+}
+
+.chat-avatar {
+    flex-shrink: 0;
+    border: 2px solid #fff;
+    box-shadow: var(--shadow-sm);
+}
+
+.admin-avatar {
+    width: 38px;
+    height: 38px;
+    border-radius: 50%;
+    background: var(--brand-100);
+    color: var(--brand-600);
+    font-size: 14px;
+    font-weight: 700;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.chat-bubble {
+    max-width: 72%;
+    background: #fff;
+    border-radius: 4px 16px 16px 16px;
+    padding: 10px 14px 6px;
+    box-shadow: var(--shadow-sm);
+}
+
+.chat-bubble.mine {
+    background: linear-gradient(135deg, #ff8a50 0%, #ff6b35 55%, #f25b26 100%);
+    color: #fff;
+    border-radius: 16px 4px 16px 16px;
+    box-shadow: 0 4px 14px rgba(255, 107, 53, .28);
+}
+
+.chat-sender {
+    font-size: 12px;
+    font-weight: 600;
+    color: var(--brand-600);
+    margin-bottom: 4px;
+}
+
+.chat-content {
+    font-size: 14px;
+    line-height: 1.65;
+    word-break: break-word;
+    white-space: pre-wrap;
+}
+
+.chat-time {
+    font-size: 11px;
+    color: var(--ink-3);
+    margin-top: 4px;
+    text-align: right;
+}
+
+.chat-time.mine {
+    color: rgba(255, 255, 255, .75);
 }
 </style>
 

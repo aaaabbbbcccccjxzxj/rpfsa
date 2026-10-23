@@ -1,4 +1,9 @@
 <template>
+    <div class="page-head">
+        <h2 class="page-title">领养管理</h2>
+        <span class="page-desc">领养申请审核与处理</span>
+    </div>
+    <div class="panel">
     <!-- 搜索和刷新 -->
     <el-input v-model="searchinfo.con" placeholder="请输入" class="input-with-select" style="width: 300px;">
         <template #prepend>
@@ -11,12 +16,15 @@
     </el-input>
     <el-button :icon="Search" type="success" @click="fsearch" style="margin-left: 5px;" />
     <el-button :icon="Refresh" type="warning" @click="flush" style="margin-left: 20px;" />
+    <el-button :icon="Download" type="primary" plain :loading="exporting" @click="exportCsv" style="margin-left: 20px;">
+        导出 CSV
+    </el-button>
 
     <!-- 表格数据 -->
     <el-table :data="tableData" style="width: 100%;padding-top: 5px;" height="570" stripe highlight-current-row>
         <el-table-column prop="username" label="用户名" width="100" align="center"></el-table-column>
         <el-table-column prop="nickname" label="昵称" width="100" align="center"></el-table-column>
-        <el-table-column prop="user.email" label="邮箱" width="180" align="center"></el-table-column>
+        <el-table-column prop="user.email" label="邮箱" min-width="180" align="center"></el-table-column>
         <el-table-column prop="user.phone" label="电话" width="130" align="center"></el-table-column>
         <el-table-column prop="petname" label="动物" width="100" align="center"></el-table-column>
         <el-table-column label="种类" width="80" align="center">
@@ -53,7 +61,7 @@
     </el-table>
 
     <!-- 分页 -->
-    <div style="margin:10px 20px; float:right;">
+    <div class="pager-row">
         <el-pagination v-model:current-page="currentpage" :background="true" layout="prev, pager, next" :page-count="pages"
             @current-change="handleCurrentChange" />
     </div>
@@ -91,17 +99,37 @@
         <div>申请时间:{{ copyadoptinfo.applyTime }}</div>
         <div>回复通知:{{ copyadoptinfo.ponReason }}</div>
     </el-dialog>
+    </div>
 </template>
   
 <script setup>
 import axios from 'axios'
 import { ElMessage } from 'element-plus';
 import { onMounted, reactive, ref } from 'vue';
-import { Search, Refresh } from '@element-plus/icons-vue'
+import { Search, Refresh, Download } from '@element-plus/icons-vue'
 
 onMounted(() => {
     adoptget()
 })
+
+//#region 导出 CSV（axios blob 下载，携带管理员 token）
+const exporting = ref(false)
+function exportCsv() {
+    if (exporting.value) return
+    exporting.value = true
+    axios.get('/admin/export/adopts', { responseType: 'blob' }).then(res => {
+        const url = URL.createObjectURL(new Blob([res.data], { type: 'text/csv;charset=UTF-8' }))
+        const a = document.createElement('a')
+        a.href = url
+        a.download = 'adopts.csv'
+        a.click()
+        URL.revokeObjectURL(url)
+        ElMessage.success('导出成功')
+    }).catch(() => {
+        ElMessage.error('导出失败')
+    }).finally(() => exporting.value = false)
+}
+//#endregion
 
 //#region 模糊查询
 const searchinfo = reactive({
@@ -123,7 +151,6 @@ function fsearch() {
                 pages.value = res.data.data.pages
             } else ElMessage.error(res.data.msg)
         }).catch(err => {
-            console.error(err);
         })
 }
 //#endregion
@@ -161,34 +188,31 @@ function senddata(data) {
     adoptinfo.pid = data.pet.id
     userhowadopt.value = data.user.howAdopt
 }
+/**
+ * 提交审核结果。
+ * <p>
+ * 改造前这里串行发 3 个请求（改申请记录 → 改宠物状态 → 累加用户领养数），
+ * 任一步失败都会留下"申请已通过但宠物仍是流浪中"这类不一致数据。
+ * 现在收敛为一个事务方法，由后端一次性完成全部状态流转。
+ */
 function passornot() {
-    console.log(adoptinfo.ispass);
+    if (adoptinfo.ispass === null) {
+        ElMessage.warning('请选择审核结果')
+        return
+    }
     axios.patch('/adopt', {
         id: adoptinfo.id,
         state: adoptinfo.ispass,
-        ponReason: adoptinfo.ponreason,
-        isRead: 1,
-    }).then(() => {
-        ElMessage.success('通知已发送！')
-        adoptget()
-        console.log(adoptinfo.ispass);
-        axios.patch('/pet', {
-            id: adoptinfo.pid,
-            isAdopt: adoptinfo.ispass,
-            uid: adoptinfo.ispass ? adoptinfo.uid : 0
-        }).then(() => {
-            console.log(adoptinfo.ispass);
-            if (adoptinfo.ispass) {
-                axios.patch('/user', {
-                    id: adoptinfo.uid,
-                    howAdopt: userhowadopt.value + 1
-                })
-            }
-            clear()
-        })
-    }).catch(() => {
-        ElMessage.error('服务器故障,请稍后！')
-    })
+        ponReason: adoptinfo.ponreason
+    }).then(res => {
+        if (res.data.code == 200) {
+            ElMessage.success(res.data.msg)
+            adoptget()
+        } else {
+            ElMessage.error(res.data.msg)
+        }
+        clear()
+    }).catch(() => { /* 网络异常已由全局拦截器统一提示 */ })
 }
 
 function clear() {

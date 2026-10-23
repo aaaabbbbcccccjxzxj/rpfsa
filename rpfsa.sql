@@ -23,7 +23,8 @@ SET FOREIGN_KEY_CHECKS = 0;
 DROP TABLE IF EXISTS `admin`;
 CREATE TABLE `admin`  (
   `adminname` varchar(20) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NOT NULL,
-  `password` varchar(20) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NOT NULL,
+  -- 扩容以容纳 BCrypt 密文（60 字符）。历史明文数据会在首次登录成功时自动升级为密文
+  `password` varchar(100) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NOT NULL,
   PRIMARY KEY (`adminname`) USING BTREE
 ) ENGINE = InnoDB CHARACTER SET = utf8mb4 COLLATE = utf8mb4_unicode_ci ROW_FORMAT = Dynamic;
 
@@ -300,7 +301,8 @@ DROP TABLE IF EXISTS `user`;
 CREATE TABLE `user`  (
   `id` int NOT NULL AUTO_INCREMENT,
   `username` varchar(30) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NOT NULL,
-  `password` varchar(20) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NOT NULL,
+  -- 扩容以容纳 BCrypt 密文（60 字符）
+  `password` varchar(100) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NOT NULL,
   `nickname` varchar(30) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_520_ci NULL DEFAULT NULL,
   `photo` varchar(50) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NULL DEFAULT NULL,
   `email` varchar(30) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NULL DEFAULT NULL,
@@ -328,5 +330,19 @@ INSERT INTO `user` VALUES (113, 'user5', '123456a', 'wfawtwae', '1685972596792.j
 INSERT INTO `user` VALUES (114, 'user6', '123456a', '我爱领养', '1685972629750.jpg', 'sfwaar@qq.com', '18235234345', 1, '2023-06-05 21:34:52', 14, 0, 0);
 INSERT INTO `user` VALUES (115, 'user7', '123456a', '哈喽kitty', '1685972679614.jpg', 'dSDajhwio@163.com', '18124125124', 1, '2023-06-05 21:34:58', 485, 0, 0);
 INSERT INTO `user` VALUES (116, 'user8', '123456a', 'aaaabbbbcccc', '1685972373781.jpg', '1013909855@qq.cim', '17335523455', 1, '2023-06-05 21:35:14', 20, 0, 0);
+
+-- ----------------------------
+-- 二级索引
+-- 改造前 10 张表除主键外没有任何索引，而高频查询条件恰恰是
+-- comment.poid / adopt.userid / donate.uid / message.uid / pet.type / post.type，
+-- 数据量一上来就退化为全表扫描。
+-- ----------------------------
+ALTER TABLE `comment` ADD INDEX `idx_poid_level` (`poid`, `level`), ADD INDEX `idx_pid` (`pid`);
+ALTER TABLE `adopt`   ADD INDEX `idx_uid_isread` (`userid`, `is_read`), ADD INDEX `idx_petid` (`petid`);
+ALTER TABLE `donate`  ADD INDEX `idx_uid` (`uid`), ADD INDEX `idx_create_time` (`create_time`);
+ALTER TABLE `message` ADD INDEX `idx_uid_isread` (`uid`, `is_read`);
+ALTER TABLE `pet`     ADD INDEX `idx_type_classic` (`type`, `classic`), ADD INDEX `idx_uid` (`uid`);
+ALTER TABLE `post`    ADD INDEX `idx_type_classic` (`type`, `classic`), ADD INDEX `idx_uid` (`uid`);
+ALTER TABLE `journal` ADD INDEX `idx_pid` (`pid`);
 
 SET FOREIGN_KEY_CHECKS = 1;

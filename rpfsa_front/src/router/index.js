@@ -25,10 +25,11 @@ const routes = [
             {
                 path: '/usercenter',
                 component: () => import('../components/homechild/UserCenter.vue'),
-                beforeEnter: (to, from, next) => {
-                    if (sessionStorage.getItem("user")) next()
-                    else router.replace('/login')
-                },
+                // 守卫必须显式放行或返回重定向目标：原先只调 router.replace 而不调 next()，
+                // 会让导航一直处于 pending 状态，未登录访问时页面卡住无响应。
+                beforeEnter: () => (sessionStorage.getItem('token')
+                    ? true
+                    : { path: '/login', replace: true }),
             },
             {
                 path: '/community',
@@ -53,6 +54,13 @@ const routes = [
                 path: '/diary/:pid',
                 component: () => import('../components/homechild/Diary.vue'),
                 props: true
+            },
+            {
+                path: '/messages',
+                component: () => import('../components/homechild/MessageCenter.vue'),
+                beforeEnter: () => (sessionStorage.getItem('token')
+                    ? true
+                    : { path: '/login', replace: true }),
             }
         ]
     },

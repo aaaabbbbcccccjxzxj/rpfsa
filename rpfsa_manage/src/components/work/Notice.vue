@@ -1,4 +1,9 @@
 <template>
+    <div class="page-head">
+        <h2 class="page-title">公告管理</h2>
+        <span class="page-desc">网站公告、领养指南与新闻发布</span>
+    </div>
+    <div class="panel">
     <!-- 添加首页公告 -->
     <div>
         <el-button type="primary" plain @click="isaddpoot = true" style="margin-right: 30px;">
@@ -7,7 +12,7 @@
     </div>
     <!-- 表格数据 -->
     <el-table :data="tableData" style="width: 100%;padding-top: 5px;" height="570" stripe highlight-current-row>
-        <el-table-column label="公告标题" width="300" align="center">
+        <el-table-column label="公告标题" min-width="300" align="center">
             <template #="scope">
                 <el-text truncated>{{ scope.row.title }}</el-text>
             </template>
@@ -34,7 +39,7 @@
         </el-table-column>
     </el-table>
     <!-- 分页 -->
-    <div style="margin:10px 20px; float:right;">
+    <div class="pager-row">
         <el-pagination v-model:current-page="currentpage" :background="true" layout="prev, pager, next" :page-count="pages"
             @current-change="handleCurrentChange" />
     </div>
@@ -69,6 +74,7 @@
             </span>
         </template>
     </el-dialog>
+    </div>
 </template>
 
 <script setup>
@@ -87,7 +93,6 @@ onMounted(() => {
 
 //筛选标签
 function filterTag(value, row) {
-    console.log(row.classic, value);
     return row.classic == value
 }
 
@@ -134,7 +139,6 @@ function addpost() {
             postget()
         })
         .catch(err => {
-            console.error(err);
         })
 }
 //#endregion
@@ -151,7 +155,6 @@ function deletepost(id) {
                 ElMessage.success('删除成功')
             })
             .catch(err => {
-                console.error(err);
             })
 
     }).catch(() => {
@@ -169,7 +172,6 @@ function postget() {
             pages.value = res.data.data.pages
         })
         .catch(err => {
-            console.error(err);
         })
 }
 const tableData = ref([])

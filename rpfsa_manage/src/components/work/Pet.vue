@@ -1,4 +1,9 @@
 <template>
+    <div class="page-head">
+        <h2 class="page-title">猫狗管理</h2>
+        <span class="page-desc">猫狗档案、领养状态与日记动态</span>
+    </div>
+    <div class="panel">
     <!-- 操作栏 -->
     <div>
         <el-button type="primary" plain @click="tanchu" style="margin-right: 30px;">
@@ -17,37 +22,37 @@
     </div>
     <!-- 表格数据 -->
     <el-table :data="tableData" style="width: 100%;padding-top: 5px;" height="570" stripe highlight-current-row>
-        <el-table-column prop="petname" label="宠物名" min-width="auto" align="center" />
-        <el-table-column prop="age" label="年龄" min-width="auto" align="center" />
-        <el-table-column prop="photo" label="照片" min-width="auto" align="center">
+        <el-table-column prop="petname" label="宠物名" min-width="120" align="center" />
+        <el-table-column prop="age" label="年龄" min-width="100" align="center" />
+        <el-table-column prop="photo" label="照片" min-width="100" align="center">
             <template #="scope">
-                <el-image style="width: 65px; height: 45px;" :src="getImageUrl(scope.row.photo)" />
+                <el-image style="width: 65px; height: 45px;" :src="resolveImg(scope.row.photo)" />
             </template>
         </el-table-column>
-        <el-table-column prop="sex" label="性别" min-width="auto" align="center">
+        <el-table-column prop="sex" label="性别" min-width="100" align="center">
             <template #="scope">
                 {{ scope.row.sex == 1 ? '公' : scope.row.sex == 2 ? '不详' : '母' }}
             </template>
         </el-table-column>
-        <el-table-column prop="classic" label="种类" min-width="auto" align="center">
+        <el-table-column prop="classic" label="种类" min-width="100" align="center">
             <template #="scope">
                 {{ scope.row.classic ? '猫' : '狗' }}
             </template>
         </el-table-column>
-        <el-table-column label="类型" min-width="auto" align="center">
+        <el-table-column label="类型" min-width="100" align="center">
             <template #="scope">
                 {{ scope.row.type ? '私人上传' : '流浪平台' }}
             </template>
         </el-table-column>
-        <el-table-column prop="variety" label="品种" min-width="auto" align="center" />
-        <el-table-column prop="petCoin" label="宠宠币" min-width="auto" align="center" />
-        <el-table-column prop="isVaccine" label="疫苗" min-width="auto" align="center">
+        <el-table-column prop="variety" label="品种" min-width="120" align="center" />
+        <el-table-column prop="petCoin" label="宠宠币" min-width="100" align="center" />
+        <el-table-column prop="isVaccine" label="疫苗" min-width="100" align="center">
             <template #="scope">
                 <el-tag v-if="scope.row.isVaccine" type="success" disable-transitions="true">已接种</el-tag>
                 <el-tag v-else type="danger" disable-transitions="true">未接种</el-tag>
             </template>
         </el-table-column>
-        <el-table-column prop="isAdopt" label="状态" min-width="auto" align="center">
+        <el-table-column prop="isAdopt" label="状态" min-width="100" align="center">
             <template #="scope">
                 <el-tag v-if="scope.row.isAdopt == 1" type="success" effect="dark" disable-transitions="true">已被领养</el-tag>
                 <el-tag v-else-if="scope.row.isAdopt == 2" effect="dark" disable-transitions="true">正在申请</el-tag>
@@ -66,7 +71,7 @@
         </el-table-column>
     </el-table>
     <!-- 分页 -->
-    <div style="margin:10px 20px; float:right;">
+    <div class="pager-row">
         <el-pagination v-model:current-page="currentpage" :background="true" layout="prev, pager, next" :page-count="pages"
             @current-change="handleCurrentChange" />
     </div>
@@ -104,9 +109,9 @@
                 </el-radio-group>
             </el-form-item>
             <el-form-item class="efi" label="照片:">
-                <el-upload ref="uploadRef" class="avatar-uploader" action="http://localhost/upload" :show-file-list="false"
-                    :on-success="handleAvatarSuccess" :on-change="changeAvatar" :auto-upload="false"
-                    :before-upload="beforeAvatarUpload">
+                <el-upload ref="uploadRef" class="avatar-uploader" :action="uploadUrl" :headers="uploadHeaders()"
+                    :on-error="uploadError" :show-file-list="false" :on-success="handleAvatarSuccess" :on-change="changeAvatar"
+                    :auto-upload="false" :before-upload="beforeAvatarUpload">
                     <img v-if="imageUrl" :src="imageUrl" class="avatar" />
                     <el-icon v-else class="avatar-uploader-icon">
                         <Plus />
@@ -168,21 +173,21 @@
             <el-form-item class="efi" label="宠宠币:">
                 <el-input type="number" v-model="petinfo_x.value.petCoin" style="width: 100px;" />
             </el-form-item>
-            <!-- <el-form-item class="efi" label="照片:">
-                    <el-upload ref="uploadRef" class="avatar-uploader" action="http://localhost/upload"
-                        :show-file-list="false" :on-success="handleAvatarSuccess" :on-change="changeAvatar"
-                        :auto-upload="false" :before-upload="beforeAvatarUpload">
-                        <img v-if="imageUrl" :src="imageUrl" class="avatar" />
-                        <el-icon v-else class="avatar-uploader-icon">
-                            <Plus />
-                        </el-icon>
-                    </el-upload>
-                    <div style="margin-left: 50px;">
-                        <el-input v-model="petinfo.describtion" :rows="6" type="textarea" placeholder="请输入描述信息"
-                            resize="none" />
+            <el-form-item class="efi" label="相册:">
+                <div class="album-manage">
+                    <div class="album-item" v-for="ph in albumPhotos" :key="ph.id">
+                        <el-image :src="resolveImg(ph.url)" fit="cover" class="album-img"
+                            :preview-src-list="[resolveImg(ph.url)]" preview-teleported="true" />
+                        <el-button type="danger" size="small" circle :icon="Delete" class="album-del"
+                            @click="deleteAlbumPhoto(ph.id)" />
                     </div>
-                </el-form-item> -->
-
+                    <el-upload class="album-uploader" :action="uploadUrl" :headers="uploadHeaders()"
+                        :on-error="uploadError" :show-file-list="false" :on-success="handleAlbumSuccess"
+                        :before-upload="beforeAvatarUpload">
+                        <div class="album-add"><el-icon><Plus /></el-icon></div>
+                    </el-upload>
+                </div>
+            </el-form-item>
         </el-form>
         <template #footer>
             <span>
@@ -207,6 +212,7 @@
             <div class="ql-editor" v-html="diary.value.diary"></div>
         </el-scrollbar>
     </el-dialog>
+    </div>
 </template>
   
 <script setup>
@@ -215,6 +221,9 @@ import { onMounted, reactive, ref } from 'vue';
 import { Expand, Delete, Plus, Search, Refresh, Postcard } from '@element-plus/icons-vue'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import 'quill/dist/quill.core.css'
+import { resolveImg, resolveUploadUrl, uploadHeaders, uploadError } from '@/utils/url'
+
+const uploadUrl = resolveUploadUrl()
 
 onMounted(() => {
     petget()
@@ -230,10 +239,8 @@ function querydiarylist(pid) {
         if (res.data.code == 200) {
             diarylist.value = res.data.data
             diarysVisible.value = true
-            console.log(diarylist.value);
         } else ElMessage.warning(res.data.msg)
     }).catch((err) => {
-        console.log(err);
     })
 }
 function showdiary(dia) {
@@ -258,7 +265,6 @@ function fsearch() {
             }
         })
         .catch(err => {
-            console.error(err);
         })
 }
 //刷新
@@ -302,6 +308,7 @@ const petinfo_x = reactive({})
 function editpet(pet) {
     petinfo_x.value = pet
     dialogFormVisible_x.value = true
+    loadAlbum(pet.id)
 }
 function updatepet() {
     axios.patch('/pet', petinfo_x.value).then((res) => {
@@ -312,6 +319,34 @@ function updatepet() {
     })
     dialogFormVisible_x.value = false
 }
+
+//#region 相册管理（编辑弹窗内）
+const albumPhotos = ref([])
+function loadAlbum(pid) {
+    axios.get(`/pet/${pid}`).then(res => {
+        if (res.data.code == 200) {
+            albumPhotos.value = res.data.data.photos || []
+        }
+    }).catch(() => { albumPhotos.value = [] })
+}
+function handleAlbumSuccess(response) {
+    // response 为上传接口返回的文件名
+    axios.post('/pet/photo', { pid: petinfo_x.value.id, url: response }).then(res => {
+        if (res.data.code == 200) {
+            ElMessage.success('相册照片已添加')
+            loadAlbum(petinfo_x.value.id)
+        } else ElMessage.error(res.data.msg)
+    }).catch(() => ElMessage.error('添加失败'))
+}
+function deleteAlbumPhoto(photoId) {
+    axios.delete(`/pet/photo/${photoId}`).then(res => {
+        if (res.data.code == 200) {
+            ElMessage.success('已删除')
+            loadAlbum(petinfo_x.value.id)
+        } else ElMessage.error(res.data.msg)
+    }).catch(() => {})
+}
+//#endregion
 //#endregion
 
 //#region 删除
@@ -390,9 +425,6 @@ function beforeAvatarUpload(rawFile) {
 }
 //#endregion
 
-//vue3访问静态资源
-function getImageUrl(url) { return new URL(`img/${url}`, 'http://localhost/').href }
-
 </script>
 <style scoped>
 .el-dialog-div {
@@ -413,6 +445,57 @@ function getImageUrl(url) { return new URL(`img/${url}`, 'http://localhost/').hr
 
 .efi {
     margin-bottom: 8px;
+}
+
+/* 相册管理 */
+.album-manage {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 10px;
+}
+
+.album-item {
+    position: relative;
+    width: 90px;
+    height: 90px;
+    border-radius: 8px;
+    overflow: hidden;
+    border: 1px solid var(--line);
+}
+
+.album-img {
+    width: 100%;
+    height: 100%;
+    display: block;
+}
+
+.album-del {
+    position: absolute;
+    top: 4px;
+    right: 4px;
+    width: 20px;
+    height: 20px;
+    min-height: 20px;
+    padding: 0;
+}
+
+.album-uploader .album-add {
+    width: 90px;
+    height: 90px;
+    border: 1px dashed var(--el-border-color);
+    border-radius: 8px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    color: #8c939d;
+    font-size: 22px;
+    transition: border-color .2s ease;
+}
+
+.album-uploader .album-add:hover {
+    border-color: var(--el-color-primary);
+    color: var(--el-color-primary);
 }
 </style>
 

@@ -1,62 +1,79 @@
 <template>
-    <!-- 筛选和搜索 -->
-    <div style="margin: 15px;">
-        <el-input v-model="searchinfo.con" placeholder="请输入" style="width: 400px;">
-            <template #prepend>
-                <el-select v-model="searchinfo.col" placeholder="选择" style="width: 80px">
-                    <el-option label="名字" value="petname" />
-                    <el-option label="品种" value="variety" />
-                </el-select>
-            </template>
-            <template #append>
-                <el-button @click="search">搜索</el-button>
-            </template>
-        </el-input>
-    </div>
-    <div style="margin: 15px;">
-        <el-radio-group v-model="classic" @change="classicchange">
-            <el-radio-button :label="0">小狗</el-radio-button>
-            <el-radio-button :label="1">小猫</el-radio-button>
-            <el-radio-button :label="2">其他</el-radio-button>
-        </el-radio-group>
-    </div>
-    <div style="margin: 15px;">
-        <el-radio-group v-model="showchange" @change="typechange()">
-            <el-radio-button :label="0">平台流浪</el-radio-button>
-            <el-radio-button :label="1">私人上传</el-radio-button>
-        </el-radio-group>
-    </div>
-    <div style="margin: 15px;">
-        <el-button type="primary" plain @click="flush">刷新</el-button>
-    </div>
-    <div v-if="showchange == 1" style="margin: 15px;">
-        <el-button type="primary" plain @click="tanchu">添加</el-button>
-    </div>
-    <!-- 分页 -->
-    <div class="action-bar">
-        <div style="margin:10px 20px;">
+    <div class="page-container">
+        <!-- 工具栏：关键词 + 分类 + 来源 + 组合筛选收进卡片 -->
+        <div class="toolbar soft-card">
+            <el-input v-model="keyword" placeholder="输入名字或品种关键词" class="search-input" clearable
+                @keyup.enter="applyFilter" @clear="applyFilter">
+                <template #append>
+                    <el-button @click="applyFilter">搜索</el-button>
+                </template>
+            </el-input>
+            <el-radio-group v-model="filters.classic" @change="applyFilter" class="seg">
+                <el-radio-button :label="null">全部</el-radio-button>
+                <el-radio-button :label="0">小狗</el-radio-button>
+                <el-radio-button :label="1">小猫</el-radio-button>
+                <el-radio-button :label="2">其他</el-radio-button>
+            </el-radio-group>
+            <el-radio-group v-model="filters.type" @change="applyFilter" class="seg">
+                <el-radio-button :label="null">全部来源</el-radio-button>
+                <el-radio-button :label="0">平台流浪</el-radio-button>
+                <el-radio-button :label="1">私人上传</el-radio-button>
+            </el-radio-group>
+            <div class="spacer"></div>
+            <el-button v-if="filters.type === 1" type="primary" plain @click="tanchu">添加</el-button>
+            <el-button @click="flush">重置</el-button>
+        </div>
+        <!-- 组合筛选行 -->
+        <div class="filter-row soft-card">
+            <span class="filter-label">性别</span>
+            <el-select v-model="filters.sex" placeholder="不限" clearable class="filter-select" @change="applyFilter">
+                <el-option label="公" :value="1" />
+                <el-option label="母" :value="0" />
+                <el-option label="不详" :value="2" />
+            </el-select>
+            <span class="filter-label">年龄</span>
+            <el-select v-model="filters.ageRange" placeholder="不限" clearable class="filter-select" @change="applyFilter">
+                <el-option label="1 岁以下" :value="[0, 1]" />
+                <el-option label="1~3 岁" :value="[1, 3]" />
+                <el-option label="3~5 岁" :value="[3, 5]" />
+                <el-option label="5 岁以上" :value="[5, 99]" />
+            </el-select>
+            <span class="filter-label">疫苗</span>
+            <el-select v-model="filters.isVaccine" placeholder="不限" clearable class="filter-select" @change="applyFilter">
+                <el-option label="已接种" :value="1" />
+                <el-option label="未接种" :value="0" />
+            </el-select>
+            <span class="filter-label">状态</span>
+            <el-select v-model="filters.isAdopt" placeholder="不限" clearable class="filter-select" @change="applyFilter">
+                <el-option label="流浪中" :value="0" />
+                <el-option label="已领养" :value="1" />
+                <el-option label="审核中" :value="2" />
+            </el-select>
+        </div>
+        <!-- 分页 -->
+        <div class="action-bar">
             <el-pagination v-model:current-page="currentpage" :background="true" layout="prev, pager, next"
                 :page-count="pages" @current-change="handleCurrentChange" />
         </div>
-    </div>
-    <!-- 流浪猫狗列表 -->
-    <div class="animal-cards">
-        <div class="animal-card" v-for="pet in pets" :key="pet.id">
-            <router-link :to="`/petdetail/${pet.id}`">
-                <div class="animal-image">
-                    <img :src="getImageUrl(pet.photo)" alt="Animal Image" />
+        <!-- 流浪猫狗列表 -->
+        <div class="animal-cards">
+            <div class="animal-card soft-card" v-for="pet in pets" :key="pet.id">
+                <router-link :to="`/petdetail/${pet.id}`" class="animal-link">
+                    <div class="animal-image">
+                        <img :src="resolveImg(pet.photo)" alt="Animal Image" />
+                    </div>
+                </router-link>
+                <div class="animal-details">
+                    <h3>{{ pet.petname }}</h3>
+                    <span>
+                        <el-tag v-if="pet.isAdopt == 1" type="success" size="small" round>已领养</el-tag>
+                        <el-tag v-else-if="pet.isAdopt == 0" type="warning" size="small" round>流浪中</el-tag>
+                        <el-tag v-else size="small" round>审核中</el-tag>
+                    </span>
                 </div>
-            </router-link>
-            <div class="animal-details">
-                <h3>{{ pet.petname }}</h3>
-                <!-- <span>
-                    <el-tag v-if="pet.isAdopt == 1" type="success">已领养</el-tag>
-                    <el-tag v-else-if="pet.isAdopt == 0" type="warning">流浪中</el-tag>
-                    <el-tag v-else>领养审核中</el-tag>
-                </span> -->
             </div>
         </div>
-    </div>
+        <div v-if="pets.length === 0" class="empty-state">暂无符合条件的猫狗，换个条件试试～</div>
     <!-- 私人添加弹层 -->
     <el-dialog v-model="dialogFormVisible" title="填写猫狗信息" style="border-radius: 20px; width: 600px;">
         <el-form label-position="left" label-width="80px" :model="petinfo" style="max-width: 450px">
@@ -90,9 +107,9 @@
                 </el-radio-group>
             </el-form-item>
             <el-form-item class="efi" label="照片:">
-                <el-upload ref="uploadRef" class="avatar-uploader" action="http://localhost/upload" :show-file-list="false"
-                    :on-success="handleAvatarSuccess" :on-change="changeAvatar" :auto-upload="false"
-                    :before-upload="beforeAvatarUpload">
+                <el-upload ref="uploadRef" class="avatar-uploader" :action="uploadUrl" :headers="uploadHeaders()"
+                    :on-error="uploadError" :show-file-list="false" :on-success="handleAvatarSuccess" :on-change="changeAvatar"
+                    :auto-upload="false" :before-upload="beforeAvatarUpload">
                     <img v-if="imageUrl" :src="imageUrl" class="avatar" />
                     <el-icon v-else class="avatar-uploader-icon">
                         <Plus />
@@ -110,6 +127,7 @@
             </span>
         </template>
     </el-dialog>
+    </div>
 </template>
 
 <script setup>
@@ -117,54 +135,41 @@ import { onMounted, ref, reactive } from 'vue';
 import axios from 'axios'
 import { Plus } from '@element-plus/icons-vue'
 import { ElMessage } from 'element-plus';
+import { resolveImg, resolveUploadUrl, uploadHeaders, uploadError } from '@/utils/url';
+
+// 上传地址与图片地址统一从这里取，不再硬编码 http://localhost
+const uploadUrl = resolveUploadUrl()
 
 onMounted(() => {
     petsget()
 })
 
-//#region 条件查询
-//筛选
-const classic = ref(null)
-function classicchange() {
-    showchange.value = null
-    conditionquery('classic', classic.value)
-}
-//切换
-const showchange = ref(null)
-function typechange() {
-    classic.value = null
-    conditionquery('type', showchange.value)
-}
-//搜索信息
-const searchinfo = reactive({
-    col: null,
-    con: null
+//#region 组合筛选（走后端 /pet/filter，所有条件服务端组装）
+const keyword = ref('')
+const filters = reactive({
+    classic: null,
+    type: null,
+    sex: null,
+    ageRange: null,
+    isVaccine: null,
+    isAdopt: null
 })
-//模糊搜索
-function search() {
-    conditionquery(searchinfo.col, searchinfo.con)
+
+function applyFilter() {
+    currentpage.value = 1
+    loadPets()
 }
-//刷新
+
 function flush() {
-    petsget()
-    searchinfo.col = null
-    searchinfo.con = null
-    showchange.value = null
-    classic.value = null
-}
-//条件查询函数
-function conditionquery(column, condition) {
-    axios.get(`/pet/${currentpage.value}/${column}/${condition}`)
-        .then(res => {
-            if (res.data.code == 200) {
-                pets.value = res.data.data.records
-                pages.value = res.data.data.pages
-            } else {
-                ElMessage.error(res.data.msg)
-            }
-        }).catch(err => {
-            console.error(err);
-        })
+    keyword.value = ''
+    filters.classic = null
+    filters.type = null
+    filters.sex = null
+    filters.ageRange = null
+    filters.isVaccine = null
+    filters.isAdopt = null
+    currentpage.value = 1
+    loadPets()
 }
 //#endregion
 
@@ -172,21 +177,38 @@ function conditionquery(column, condition) {
 const currentpage = ref(1)
 const pages = ref(0)
 const pets = ref([])
-function petsget() {
-    axios.get(`pet/page/${currentpage.value}`)
+
+function loadPets() {
+    const params = { current: currentpage.value }
+    if (keyword.value) params.keyword = keyword.value
+    if (filters.classic !== null) params.classic = filters.classic
+    if (filters.type !== null) params.type = filters.type
+    if (filters.sex !== null) params.sex = filters.sex
+    if (filters.isVaccine !== null) params.isVaccine = filters.isVaccine
+    if (filters.isAdopt !== null) params.isAdopt = filters.isAdopt
+    if (filters.ageRange) {
+        params.minAge = filters.ageRange[0]
+        params.maxAge = filters.ageRange[1]
+    }
+    axios.get('/pet/filter', { params })
         .then(res => {
             if (res.data.code == 200) {
                 pets.value = res.data.data.records
                 pages.value = res.data.data.pages
-            } else ElMessage.warning(res.data.msg)
-        }).catch(err => {
-            console.error(err);
-        })
+            } else {
+                pets.value = []
+                pages.value = 0
+            }
+        }).catch(() => {})
 }
+
+function petsget() {
+    loadPets()
+}
+
 function handleCurrentChange(currentpagec) {
     currentpage.value = currentpagec
-    if (searchinfo.col == null && searchinfo.con == null) petsget()
-    else search()
+    loadPets()
 }
 
 //#endregion
@@ -263,8 +285,6 @@ function beforeAvatarUpload(rawFile) {
 
 //#endregion
 
-function getImageUrl(url) { return new URL(`img/${url}`, 'http://localhost/').href }
-
 </script>
 
 <style scoped>
@@ -303,49 +323,129 @@ function getImageUrl(url) { return new URL(`img/${url}`, 'http://localhost/').hr
 </style>
 
 <style scoped>
-.action-bar {
+/* ===== 工具栏：一条卡片装下全部筛选与操作 ===== */
+.toolbar {
     display: flex;
-    justify-content: flex-end;
+    flex-wrap: wrap;
+    gap: 12px;
     align-items: center;
+    padding: 14px 16px;
     margin-bottom: 20px;
 }
 
-.animal-cards {
+.search-input {
+    width: 320px;
+    max-width: 100%;
+}
+
+.seg {
+    flex-shrink: 0;
+}
+
+.spacer {
+    flex: 1;
+}
+
+/* ===== 组合筛选行 ===== */
+.filter-row {
     display: flex;
     flex-wrap: wrap;
+    align-items: center;
+    gap: 10px;
+    padding: 12px 16px;
+    margin-top: -8px;
+    margin-bottom: 20px;
+}
+
+.filter-label {
+    font-size: 13px;
+    color: var(--ink-3);
+    font-weight: 600;
+}
+
+.filter-select {
+    width: 110px;
+}
+
+.action-bar {
+    display: flex;
     justify-content: center;
+    align-items: center;
+    margin-bottom: 22px;
+}
+
+/* ===== 宠物卡片：栅格自适应，替代原先固定 300px 宽的 flex ===== */
+.animal-cards {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(240px, 1fr));
+    gap: 20px;
 }
 
 .animal-card {
-    width: 300px;
-    height: 350px;
-    margin: 10px;
-    border: 1px solid #ccc;
-    border-radius: 8px;
     padding: 10px;
-    background-color: #f7f7f7;
-    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
-    transition: transform 0.3s ease;
+    cursor: pointer;
 }
 
 .animal-card:hover {
-    transform: translateY(-5px);
+    transform: translateY(-4px);
+    box-shadow: var(--shadow);
 }
 
+.animal-link {
+    display: block;
+    text-decoration: none;
+}
+
+.animal-image {
+    border-radius: var(--radius-sm);
+    overflow: hidden;
+    background: #f1f3f9;
+}
 
 .animal-image img {
-    width: 300px;
-    height: 215px;
-    border-radius: 4px;
+    width: 100%;
+    height: 190px;
+    object-fit: cover;
+    display: block;
+    transition: transform .3s ease;
+}
+
+.animal-card:hover .animal-image img {
+    transform: scale(1.04);
 }
 
 .animal-details {
     margin-top: 10px;
+    padding: 0 4px 4px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
 }
 
 .animal-details h3 {
-    font-size: 18px;
-    margin-bottom: 5px;
+    font-size: 16px;
+    margin: 0;
+    color: var(--ink-1);
+    font-weight: 600;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+/* ===== 小屏：卡片更密、图片更矮 ===== */
+@media (max-width: 576px) {
+    .animal-cards {
+        grid-template-columns: repeat(auto-fill, minmax(160px, 1fr));
+        gap: 12px;
+    }
+
+    .animal-image img {
+        height: 140px;
+    }
+
+    .toolbar {
+        padding: 12px;
+    }
 }
 </style>
 

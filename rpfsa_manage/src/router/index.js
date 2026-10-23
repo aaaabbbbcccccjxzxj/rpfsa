@@ -12,6 +12,8 @@ const Post = () => import('../components/work/Post.vue')
 const Food = () => import('../components/work/Food.vue')
 const Donate = () => import('../components/work/Donate.vue')
 const Notice = () => import('../components/work/Notice.vue')
+const Comment = () => import('../components/work/Comment.vue')
+const Recharge = () => import('../components/work/Recharge.vue')
 const routes = [
     {
         path: '/',
@@ -20,10 +22,11 @@ const routes = [
     {
         path: '/home',
         component: Home,
-        beforeEnter: (to, from, next) => {
-            if (sessionStorage.getItem("adminname")) next()
-            else router.replace('/')
-        },
+        // 守卫必须显式放行或返回重定向目标：原先只调 router.replace 而不调 next()，
+        // 会让导航一直处于 pending 状态，未登录访问后台页面时界面卡住无响应。
+        beforeEnter: () => (sessionStorage.getItem('adminToken')
+            ? true
+            : { path: '/', replace: true }),
         children: [
             {
                 path: 'user',
@@ -56,6 +59,14 @@ const routes = [
             {
                 path: 'notice',
                 component: Notice
+            },
+            {
+                path: 'comment',
+                component: Comment
+            },
+            {
+                path: 'recharge',
+                component: Recharge
             }
         ]
     },

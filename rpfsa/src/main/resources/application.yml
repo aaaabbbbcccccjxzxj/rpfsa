@@ -1,0 +1,57 @@
+server:
+  # 端口与运行环境解耦，默认保持原来的 80。
+  # 变量统一加 RPFSA_ 前缀：SERVER_PORT / DB_HOST 这类通用名很容易与
+  # 机器上已有的系统环境变量撞车，导致应用监听到意料之外的端口。
+  port: ${RPFSA_PORT:80}
+
+spring:
+  application:
+    name: rpfsa
+  datasource:
+    druid:
+      url: jdbc:mysql://${RPFSA_DB_HOST:localhost}:${RPFSA_DB_PORT:3306}/${RPFSA_DB_NAME:rpfsa}?useUnicode=true&characterEncoding=utf8&useSSL=false&serverTimezone=Asia/Shanghai&allowPublicKeyRetrieval=true
+      username: ${RPFSA_DB_USERNAME:root}
+      # 凭据改为环境变量注入，本地开发走默认值，生产不再明文写死在仓库里
+      password: ${RPFSA_DB_PASSWORD:135246}
+      initial-size: 5
+      min-idle: 5
+      max-active: 20
+      validation-query: SELECT 1
+      test-while-idle: true
+  #高版本配置swagger
+  mvc:
+    pathmatch:
+      matching-strategy: ant_path_matcher
+  #配置返回给前端json的时间格式
+  jackson:
+    date-format: yyyy-MM-dd HH:mm:ss
+    time-zone: Asia/Shanghai
+  servlet:
+    multipart:
+      max-file-size: 2MB
+      max-request-size: 4MB
+mybatis-plus:
+  global-config:
+    db-config:
+      logic-delete-field: isDel
+      logic-delete-value: 1
+      logic-not-delete-value: 0
+  configuration:
+    # 由 stdout 改为 slf4j，交由 logging.level 统一控制开关与落盘
+    log-impl: org.apache.ibatis.logging.slf4j.Slf4jImpl
+
+app:
+  upload:
+    # 上传目录移出 classpath 与源码目录，可被环境变量覆盖
+    dir: ${RPFSA_UPLOAD_DIR:./upload}
+  token:
+    # 生产环境必须通过环境变量覆盖
+    secret: ${RPFSA_TOKEN_SECRET:rpfsa-local-dev-secret-please-change-me}
+  cors:
+    # 留空表示不开启跨域（前端开发用 vite proxy 同源转发）；多个来源用逗号分隔
+    allowed-origins: ${RPFSA_CORS_ORIGINS:}
+
+logging:
+  level:
+    root: info
+    com.erdongj: debug
