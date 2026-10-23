@@ -207,7 +207,7 @@ rpfsa/
 
 ### 图片上传
 
-上传文件保存至 `UPLOAD_DIR`（默认 `./upload`），经 `/img/**` 对外访问；不再写入 classpath 或源码目录，打包为 jar 后依然可用。仅接受 jpg / jpeg / png / gif / webp / bmp，单文件不超过 2MB。
+上传文件保存至 `UPLOAD_DIR`（默认 `./upload`，相对于后端启动目录，即 `rpfsa/upload`），经 `/img/**` 对外访问；不再写入 classpath 或源码目录，打包为 jar 后依然可用。仅接受 jpg / jpeg / png / gif / webp / bmp，单文件不超过 2MB。若在仓库根目录启动 jar，可通过 `RPFSA_UPLOAD_DIR=./rpfsa/upload` 指向同一目录。
 
 ## 📄 许可证
 
